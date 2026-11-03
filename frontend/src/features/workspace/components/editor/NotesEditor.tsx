@@ -84,7 +84,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
   });
 
-  const { clearDraft } = useEditorPersistence(editor, onContentChange, onSaveStatusChange);
+  const { clearDraft, isHydrated, isPlaylistDocument, hasPendingAiDraft } = useEditorPersistence(editor, onContentChange, onSaveStatusChange);
 
   const formatTime = useCallback((seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -158,6 +158,18 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
     void clearDraft();
   };
 
+  const handleRequestClearDraft = () => {
+    if (!editor || !isHydrated) {
+      notify.info("Notes are still loading", "Wait for the editor to finish loading before clearing its draft.");
+      return;
+    }
+    if (editor.isEmpty && !hasPendingAiDraft) {
+      notify.info("Nothing to clear", "The editor is already empty. Your transcript and video details are still available.");
+      return;
+    }
+    setIsClearDialogOpen(true);
+  };
+
   return (
     <div
       className={`bg-white border border-slate-200 flex min-h-0 min-w-0 flex-col overflow-hidden shadow-xs focus-within:ring-1 focus-within:ring-slate-300 transition-all ${
@@ -175,7 +187,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         formatTime={formatTime}
         onInsertTimestamp={handleInsertTimestamp}
         onImageUpload={handleImageUpload}
-        onRequestClear={() => setIsClearDialogOpen(true)}
+        onRequestClear={handleRequestClearDraft}
         displayMode={displayMode}
       />
 
@@ -191,9 +203,21 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
 
       <ConfirmDialog
         isOpen={isClearDialogOpen}
-        title="Delete Note Draft?"
-        description="Clear this note draft and its saved edits from this device? Your imported transcript and video information will remain available."
-        confirmText="Yes, Delete Draft"
+        title={isPlaylistDocument
+          ? "Clear playlist notes?"
+          : editor?.isEmpty && hasPendingAiDraft
+            ? "Clear pending AI draft?"
+            : hasPendingAiDraft
+              ? "Clear editor and pending AI draft?"
+              : "Clear editor draft?"}
+        description={isPlaylistDocument
+          ? "This clears the current playlist notes document and its saved copy on this device. The playlist videos and their transcripts remain available."
+          : editor?.isEmpty && hasPendingAiDraft
+            ? "The editor is empty, but a generated AI draft is waiting. Clearing removes that pending draft and any saved editor notes from this device. Your transcript and video details stay available."
+            : hasPendingAiDraft
+              ? "This clears the editor content, the pending AI draft, and its saved copy on this device. Your transcript, video details, and chapters stay available, so you can create a different draft afterward."
+              : "This clears all content currently in the editor and its saved copy on this device. Your transcript, video details, and chapters stay available, so you can create a different draft afterward."}
+        confirmText="Clear notes"
         cancelText="Cancel"
         variant="danger"
         onConfirm={handleConfirmClearDraft}

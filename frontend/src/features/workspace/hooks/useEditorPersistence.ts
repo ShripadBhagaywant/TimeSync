@@ -18,6 +18,9 @@ export const useEditorPersistence = (
   const playlistDocument = useWorkspaceStore((state) => state.playlistNoteDocument);
   const playlistDocumentHydrated = useWorkspaceStore((state) => state.playlistDocumentHydrated);
   const discardPendingAiDraft = useWorkspaceStore((state) => state.discardPendingAiDraft);
+  const hasPendingAiDraft = useWorkspaceStore((state) => Boolean(
+    state.activeVideo?.videoId && state.pendingAiDrafts[state.activeVideo.videoId],
+  ));
 
   const videoId = activeVideo?.videoId || "";
   const videoTitle = activeVideo?.title || "Untitled Note";
@@ -173,5 +176,11 @@ export const useEditorPersistence = (
     }
   }, [activeVideo, discardPendingAiDraft, documentId, editor, playlistDocument, videoId, videoTitle]);
 
-  return { clearDraft: handleConfirmClearDraft, saveStatus: effectiveSaveStatus };
+  return {
+    clearDraft: handleConfirmClearDraft,
+    saveStatus: effectiveSaveStatus,
+    isHydrated: playlistDocument ? playlistDocumentHydrated : hydratedVideoId === videoId,
+    isPlaylistDocument: Boolean(playlistDocument),
+    hasPendingAiDraft,
+  };
 };

@@ -83,6 +83,15 @@ export const WorkspacePage: React.FC = () => {
     activeVideo?.title ||
     "Untitled Workspace";
   const workspaceType = playlistData ? "playlist" : "single";
+  const homeConfirmDescription = !autoSaveEnabled
+    ? "Auto-save is off, so recent edits may not be saved. Going home does not delete an existing draft; use Clear Draft in the editor first if you want to remove it."
+    : saveStatus === "saved"
+      ? "Your latest draft is saved on this device. Going home keeps it; it does not clear or delete it. Use Clear Draft in the editor if you want to remove it first."
+      : saveStatus === "saving"
+        ? "Your draft is still saving. Wait for Saved locally before leaving to keep your latest edits. Going home does not clear the saved draft."
+        : saveStatus === "error"
+          ? "The latest edits could not be saved. Going home may lose those edits, but it does not delete an earlier saved draft."
+          : "Going home does not clear your draft. It remains on this device if saved. Use Clear Draft in the editor first if you want to remove it.";
   const visiblePendingAiDraft = activeVideo?.videoId
     ? (pendingAiDrafts[activeVideo.videoId] ?? null)
     : null;
@@ -268,9 +277,9 @@ export const WorkspacePage: React.FC = () => {
       <ConfirmDialog
         isOpen={isHomeConfirmOpen}
         title="Leave this workspace?"
-        description={autoSaveEnabled && saveStatus === "saved" ? "Your notes are saved on this device. You can return to this workspace later." : "Some recent edits may still be saving. Leave now only if you are comfortable returning to the last saved version."}
+        description={homeConfirmDescription}
         confirmText="Go home"
-        cancelText="Cancel"
+        cancelText="Stay in workspace"
         variant="warning"
         onConfirm={() => {
           setIsHomeConfirmOpen(false);

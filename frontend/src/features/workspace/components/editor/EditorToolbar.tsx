@@ -427,9 +427,9 @@ export const EditorToolbar: React.FC<EditorToolbarProps> = memo(
                 <button
                   type="button"
                   onClick={onRequestClear}
-                  aria-label="Clear draft"
+                  aria-label="Clear editor draft"
                   className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-slate-600 transition-colors hover:bg-red-50 hover:text-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1 cursor-pointer"
-                  title="Clear Draft"
+                  title="Clear editor draft"
                 >
                   <Trash2 className="w-3.5 h-3.5" />
                 </button>

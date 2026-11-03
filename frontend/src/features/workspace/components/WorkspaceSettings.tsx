@@ -106,6 +106,7 @@ export function WorkspaceSettings({
             type="button"
             onClick={onHome}
             aria-label="Return to Home"
+            title="Go home; your draft is not cleared"
             className="flex h-9 w-9 items-center justify-center rounded-xl text-blue-600 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
           >
             <Home aria-hidden="true" className="h-4 w-4" />
