@@ -28,7 +28,7 @@ export const Footer: React.FC = () => {
           aria-label="Footer Navigation"
         >
           <a
-            href="https://github.com"
+            href="https://github.com/ShripadBhagaywant/TimeSync"
             target="_blank"
             rel="noopener noreferrer"
             className="hover:text-slate-200 transition-colors"

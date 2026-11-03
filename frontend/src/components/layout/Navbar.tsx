@@ -13,7 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: "Workspace", href: "/workspace" },
 ];
 
-const GITHUB_REPO_URL = "https://github.com";
+const GITHUB_REPO_URL = "https://github.com/ShripadBhagaywant/TimeSync";
 
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
