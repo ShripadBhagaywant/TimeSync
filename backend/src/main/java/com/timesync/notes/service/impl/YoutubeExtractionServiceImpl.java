@@ -1,0 +1,504 @@
+package com.timesync.notes.service.impl;
+
+import com.timesync.notes.model.ChapterDiscoveryResult;
+import com.timesync.notes.integration.youtube.YoutubePlayerResponseClient;
+import com.timesync.notes.integration.youtube.YoutubeContentOperation;
+import com.timesync.notes.integration.youtube.YoutubeContentRequestContext;
+
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.timesync.notes.dto.response.ChapterDto;
+import com.timesync.notes.dto.response.CaptionTrackDto;
+import com.timesync.notes.exception.ApiException;
+import com.timesync.notes.exception.YoutubeBusyException;
+import com.timesync.notes.exception.UnprocessableVideoException;
+import com.timesync.notes.exception.UpstreamRateLimitException;
+import com.timesync.notes.exception.UpstreamServiceUnavailableException;
+import com.timesync.notes.model.ExtractedTranscript;
+import com.timesync.notes.service.VideoExtractionService;
+import com.timesync.notes.util.SubtitlePayloadParser;
+import com.timesync.notes.integration.youtube.YoutubeChapterParser;
+import com.timesync.notes.integration.youtube.YoutubeTimedTextTrackParser;
+import org.springframework.beans.factory.annotation.Qualifier;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.retry.annotation.Backoff;
+import org.springframework.retry.annotation.Recover;
+import org.springframework.retry.annotation.Retryable;
+import org.springframework.stereotype.Service;
+import org.springframework.http.HttpHeaders;
+import org.springframework.web.client.HttpServerErrorException;
+import org.springframework.web.client.ResourceAccessException;
+import org.springframework.web.client.RestClient;
+import org.springframework.web.util.UriComponentsBuilder;
+
+import java.net.URI;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
+
+@Slf4j
+@Service
+
+public class YoutubeExtractionServiceImpl implements VideoExtractionService {
+
+    private static final String BROWSER_USER_AGENT =
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                    "(KHTML, like Gecko) Chrome/124.0 Safari/537.36";
+
+    private final RestClient restClient;
+    private final YoutubeDataApiService youtubeDataApiService;
+    private final YoutubePlayerResponseClient playerResponseClient;
+    private final ObjectMapper objectMapper;
+    private final YoutubeCaptionCircuitBreaker captionCircuitBreaker;
+
+    public YoutubeExtractionServiceImpl(@Qualifier("youtubeContentRestClient") RestClient restClient,
+            YoutubeDataApiService youtubeDataApiService, YoutubePlayerResponseClient playerResponseClient,
+            ObjectMapper objectMapper, YoutubeCaptionCircuitBreaker captionCircuitBreaker) {
+        this.restClient = restClient;
+        this.youtubeDataApiService = youtubeDataApiService;
+        this.playerResponseClient = playerResponseClient;
+        this.objectMapper = objectMapper;
+        this.captionCircuitBreaker = captionCircuitBreaker;
+    }
+
+    @Value("${app.youtube.timedtext-base-url}")
+    private String timedTextBaseUrl;
+
+    @Override
+    @Retryable(
+            notRecoverable = {YoutubeBusyException.class, UpstreamServiceUnavailableException.class},
+            retryFor = {
+                    ResourceAccessException.class,
+                    HttpServerErrorException.class
+            },
+            maxAttemptsExpression = "${app.youtube.retry.max-attempts:3}",
+            backoff = @Backoff(
+                    delayExpression = "${app.youtube.retry.initial-delay-ms:1000}",
+                    multiplierExpression = "${app.youtube.retry.multiplier:2.0}",
+                    maxDelayExpression = "${app.youtube.retry.max-delay-ms:8000}"
+            )
+    )
+    public ExtractedTranscript extractTranscript(String videoId, String targetLanguage) {
+        String targetLanguageCode = languageCodeFor(targetLanguage);
+        captionCircuitBreaker.checkAllowed();
+        log.info(
+                "Discovering original caption tracks for video ID: {}; requested AI output language: {} ({})",
+                videoId,
+                targetLanguage,
+                targetLanguageCode
+        );
+
+        List<CaptionTrack> tracks = discoverCaptionTracks(videoId);
+        List<CaptionTrack> orderedTracks = orderTracks(tracks);
+        Set<String> attempted = new LinkedHashSet<>();
+        List<SubtitlePayloadParser.Reason> failures = new ArrayList<>();
+        for (CaptionTrack track : orderedTracks) {
+            try {
+                ExtractedTranscript parsed = downloadTrack(track, videoId, attempted, failures);
+                if (isUsable(parsed)) {
+                    captionCircuitBreaker.recordSuccess();
+                    log.info(
+                            "Using {} caption track ({}) for video {}",
+                            track.autoGenerated() ? "auto-generated" : "manual",
+                            safeLanguage(track.languageCode()),
+                            videoId
+                    );
+                    return decorateTranscript(parsed, track, orderedTracks);
+                }
+            } catch (UpstreamRateLimitException ex) {
+                throw ex;
+            } catch (ApiException ex) {
+                if (!"VIDEO_NOT_FOUND".equals(ex.getErrorCode())) {
+                    throw ex;
+                }
+                log.debug("Caption track was unavailable for video {}: {}", videoId, ex.getClass().getSimpleName());
+            }
+        }
+
+        ExtractedTranscript legacyTranscript = fetchLegacyPreferredTranscript(videoId, targetLanguageCode, attempted, failures);
+        if (isUsable(legacyTranscript)) {
+            captionCircuitBreaker.recordSuccess();
+            return legacyTranscript;
+        }
+
+        if (!failures.isEmpty()) {
+            throw new UpstreamServiceUnavailableException("YouTube returned an invalid caption response. Please retry later.", null);
+        }
+        throw new UnprocessableVideoException(
+                "No accessible captions are available for this video.",
+                "CAPTIONS_UNAVAILABLE"
+        );
+    }
+
+    @Recover
+    public ExtractedTranscript recoverRateLimit(
+            UpstreamRateLimitException ex,
+            String videoId,
+            String targetLanguage) {
+        log.warn("YouTube transcript request was rate-limited for video {}; propagating temporary failure", videoId);
+        throw ex;
+    }
+
+    @Recover
+    public ExtractedTranscript recoverTranscript(ResourceAccessException ex, String videoId, String targetLanguage) {
+        throw upstreamUnavailable(ex, videoId);
+    }
+
+    @Recover
+    public ExtractedTranscript recoverTranscript(HttpServerErrorException ex, String videoId, String targetLanguage) {
+        throw upstreamUnavailable(ex, videoId);
+    }
+
+    @Recover
+    public ExtractedTranscript recoverUnprocessableVideo(
+            UnprocessableVideoException ex,
+            String videoId,
+            String targetLanguage) {
+        throw ex;
+    }
+
+    private UpstreamServiceUnavailableException upstreamUnavailable(Exception ex, String videoId) {
+        log.error("Exhausted retries fetching transcript for video ID {}: {}", videoId, ex.getClass().getSimpleName());
+        return new UpstreamServiceUnavailableException(
+                "Failed to reach YouTube caption services after multiple retries. Please try again.",
+                ex
+        );
+    }
+
+    private List<CaptionTrack> discoverCaptionTracks(String videoId) {
+        List<CaptionTrack> timedTextTracks = discoverTimedTextTracks(videoId);
+        if (!timedTextTracks.isEmpty()) {
+            return timedTextTracks;
+        }
+
+        JsonNode playerResponse;
+        try {
+            playerResponse = readPlayerResponse(videoId, YoutubeContentOperation.WATCH_PAGE);
+        } catch (UpstreamRateLimitException | UpstreamServiceUnavailableException | YoutubeBusyException
+                 | ResourceAccessException | HttpServerErrorException ex) {
+            log.warn("YouTube WATCH_PAGE caption-track discovery unavailable. operation=WATCH_PAGE, videoId={}, error={}. Continuing to caption retrieval.",
+                    videoId, ex.getClass().getSimpleName());
+            return List.of();
+        }
+        if (playerResponse == null) {
+            log.warn("YouTube watch page did not expose player response for video {}", videoId);
+            return List.of();
+        }
+
+        validatePlayability(playerResponse);
+
+        JsonNode captionTracks = playerResponse
+                .path("captions")
+                .path("playerCaptionsTracklistRenderer")
+                .path("captionTracks");
+
+        if (!captionTracks.isArray()) {
+            return List.of();
+        }
+
+        List<CaptionTrack> tracks = new ArrayList<>();
+        for (JsonNode trackNode : captionTracks) {
+            String baseUrl = trackNode.path("baseUrl").asText("").trim();
+            if (baseUrl.isBlank()) {
+                continue;
+            }
+            String languageCode = trackNode.path("languageCode").asText("").trim();
+            String name = readText(trackNode.path("name"));
+            boolean autoGenerated = "asr".equalsIgnoreCase(trackNode.path("kind").asText(""));
+            tracks.add(new CaptionTrack(baseUrl, languageCode, name, autoGenerated));
+        }
+        return List.copyOf(tracks);
+    }
+
+    private List<CaptionTrack> discoverTimedTextTracks(String videoId) {
+        String trackListUrl = UriComponentsBuilder.fromUriString(timedTextBaseUrl)
+                .queryParam("type", "list")
+                .queryParam("v", videoId)
+                .build()
+                .encode()
+                .toUriString();
+        String trackList = fetchSubtitleContent(trackListUrl, videoId, YoutubeContentOperation.TIMEDTEXT_DISCOVERY);
+
+        List<YoutubeTimedTextTrackParser.Track> discovered;
+        try {
+            discovered = YoutubeTimedTextTrackParser.parseValidated(trackList);
+        } catch (IllegalArgumentException ex) {
+            log.debug("Timedtext discovery failed. videoId={}, reason=MALFORMED_CAPTION_PAYLOAD", videoId);
+            throw new UpstreamServiceUnavailableException("YouTube returned an invalid caption track list. Please retry later.", null);
+        }
+        log.debug("Timedtext discovery result. videoId={}, payloadCharacters={}, trackCount={}",
+            videoId, trackList == null ? 0 : trackList.length(), discovered.size());
+        return discovered.stream()
+                .map(track -> new CaptionTrack(
+                        timedTextTrackUrl(videoId, track),
+                        track.languageCode(),
+                        track.displayName().isBlank() ? track.name() : track.displayName(),
+                        track.autoGenerated()
+                ))
+                .toList();
+    }
+
+    private String timedTextTrackUrl(String videoId, YoutubeTimedTextTrackParser.Track track) {
+        UriComponentsBuilder builder = UriComponentsBuilder.fromUriString(timedTextBaseUrl)
+                .queryParam("v", videoId)
+                .queryParam("lang", org.springframework.web.util.UriUtils.encode(track.languageCode(), java.nio.charset.StandardCharsets.UTF_8))
+                .queryParam("fmt", "vtt");
+        if (!track.name().isBlank()) {
+            builder.queryParam("name", org.springframework.web.util.UriUtils.encode(track.name(), java.nio.charset.StandardCharsets.UTF_8));
+        }
+        if (track.autoGenerated()) {
+            builder.queryParam("kind", "asr");
+        }
+        return builder.build(true).toUriString();
+    }
+
+    private JsonNode readPlayerResponse(String videoId, YoutubeContentOperation operation) {
+        String json = playerResponseClient.getPlayerResponseJson(videoId, operation);
+        if (json == null || json.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(json);
+        } catch (Exception ex) {
+            log.warn("Could not parse YouTube player response for video {}: {}", videoId, ex.getClass().getSimpleName());
+            return null;
+        }
+    }
+
+    private void validatePlayability(JsonNode playerResponse) {
+        JsonNode statusNode = playerResponse.path("playabilityStatus");
+        String status = statusNode.path("status").asText("OK");
+        if ("OK".equalsIgnoreCase(status)) {
+            return;
+        }
+
+        String reason = statusNode.path("reason").asText("Video is not publicly playable.");
+        String normalizedReason = reason.toLowerCase();
+        String code = normalizedReason.contains("private") ||
+                normalizedReason.contains("member") ||
+                normalizedReason.contains("sign in")
+                ? "MEMBERS_ONLY_VIDEO"
+                : "VIDEO_UNAVAILABLE";
+        throw new UnprocessableVideoException(reason, code);
+    }
+
+    private List<CaptionTrack> orderTracks(List<CaptionTrack> tracks) {
+        return tracks.stream()
+                .sorted(Comparator.comparingInt(track -> track.autoGenerated() ? 1 : 0))
+                .toList();
+    }
+
+    private ExtractedTranscript decorateTranscript(
+            ExtractedTranscript transcript,
+            CaptionTrack selected,
+            List<CaptionTrack> availableTracks) {
+        List<CaptionTrackDto> trackDtos = availableTracks.stream()
+                .map(track -> new CaptionTrackDto(
+                        track.languageCode(),
+                        track.name().isBlank() ? track.languageCode() : track.name(),
+                        track.autoGenerated(),
+                        track.equals(selected)
+                ))
+                .toList();
+        return new ExtractedTranscript(
+                transcript.content(),
+                transcript.segments(),
+                transcript.languageCode(),
+                transcript.autoGenerated(),
+                selected.name(),
+                trackDtos
+        );
+    }
+
+    private ExtractedTranscript fetchLegacyPreferredTranscript(String videoId, String targetLanguageCode,
+            Set<String> attempted, List<SubtitlePayloadParser.Reason> failures) {
+        Set<String> languageCodes = new LinkedHashSet<>();
+        languageCodes.add(targetLanguageCode);
+        languageCodes.add("en");
+        for (String languageCode : languageCodes) {
+            for (boolean autoGenerated : List.of(false, true)) {
+                String url = timedTextTrackUrl(videoId, new YoutubeTimedTextTrackParser.Track(languageCode, "", autoGenerated, languageCode));
+                ExtractedTranscript parsed = downloadTrack(new CaptionTrack(url, languageCode, languageCode, autoGenerated), videoId, attempted, failures);
+                if (isUsable(parsed)) {
+                    return new ExtractedTranscript(
+                            parsed.content(),
+                            parsed.segments(),
+                            parsed.languageCode(),
+                            parsed.autoGenerated(),
+                            languageCode,
+                            List.of(new CaptionTrackDto(
+                                    languageCode,
+                                    languageCode,
+                                    autoGenerated,
+                                    true
+                            ))
+                    );
+                }
+            }
+        }
+        return new ExtractedTranscript("", List.of(), "", false);
+    }
+
+    private String languageCodeFor(String targetLanguage) {
+        if (targetLanguage == null || targetLanguage.isBlank()) {
+            return "en";
+        }
+        String normalized = targetLanguage.trim().toLowerCase(Locale.ROOT);
+        if (normalized.matches("[a-z]{2,3}(?:-[a-z0-9]{2,8})?")) {
+            return normalized;
+        }
+        return Map.of(
+                "english", "en",
+                "spanish", "es",
+                "french", "fr",
+                "german", "de",
+                "hindi", "hi"
+        ).getOrDefault(normalized, "en");
+    }
+
+    private String fetchSubtitleContent(String url, String videoId, YoutubeContentOperation operation) {
+        var response = YoutubeContentRequestContext.with(operation, videoId, () -> restClient.get()
+                .uri(URI.create(url))
+                .header(HttpHeaders.USER_AGENT, BROWSER_USER_AGENT)
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9")
+                .retrieve()
+                .toEntity(byte[].class));
+        var type = response.getHeaders().getContentType();
+        var charset = type == null || type.getCharset() == null ? java.nio.charset.StandardCharsets.UTF_8 : type.getCharset();
+        return response.getBody() == null ? "" : new String(response.getBody(), charset);
+    }
+
+    private ExtractedTranscript downloadTrack(CaptionTrack track, String videoId, Set<String> attempted,
+            List<SubtitlePayloadParser.Reason> failures) {
+        String url = withVttFormat(track.baseUrl());
+        if (!attempted.add(url)) return null;
+        var response = YoutubeContentRequestContext.with(YoutubeContentOperation.SUBTITLE_DOWNLOAD, videoId,
+            () -> restClient.get().uri(URI.create(url))
+                .header(HttpHeaders.USER_AGENT, BROWSER_USER_AGENT)
+                .header(HttpHeaders.ACCEPT_LANGUAGE, "en-US,en;q=0.9")
+                .retrieve().toEntity(byte[].class));
+        byte[] bytes = response.getBody() == null ? new byte[0] : response.getBody();
+        var type = response.getHeaders().getContentType();
+        var charset = type == null || type.getCharset() == null ? java.nio.charset.StandardCharsets.UTF_8 : type.getCharset();
+        // Log a bounded MIME classification, never an arbitrary upstream header value.
+        String mime = type == null ? "UNKNOWN" : type.isCompatibleWith(org.springframework.http.MediaType.TEXT_HTML) ? "text/html"
+            : type.getSubtype().equals("vtt") ? "text/vtt" : type.getSubtype().contains("xml") ? "xml" : "OTHER";
+        var result = SubtitlePayloadParser.parse(new String(bytes, charset), track.languageCode(), track.autoGenerated());
+        log.debug("Subtitle response. videoId={}, attempt={}, language={}, trackKind={}, format=vtt, status={}, contentType={}, payloadBytes={}",
+            videoId, attempted.size(), safeLanguage(track.languageCode()), track.autoGenerated() ? "ASR" : "MANUAL",
+            response.getStatusCode().value(), mime, bytes.length);
+        log.debug("Subtitle parse result. videoId={}, attempt={}, parser={}, parsedCueCount={}, usableCueCount={}, transcriptCharacters={}, reason={}",
+            videoId, attempted.size(), result.parser(), result.parsedCueCount(), result.transcript().segments().size(),
+            result.transcript().content().length(), result.reason());
+        if (result.temporary()) failures.add(result.reason());
+        if (result.reason() != SubtitlePayloadParser.Reason.OK)
+            log.debug("Subtitle track fallback. videoId={}, attempt={}, reason={}", videoId, attempted.size(), result.reason());
+        return result.reason() == SubtitlePayloadParser.Reason.OK ? result.transcript() : null;
+    }
+
+    private String safeLanguage(String language) {
+        return language != null && language.matches("[a-zA-Z0-9-]{1,35}") ? language : "unknown";
+    }
+
+    private String withVttFormat(String baseUrl) {
+        if (baseUrl.matches(".*[?&]fmt=[^&]*.*")) {
+            return baseUrl.replaceFirst("([?&])fmt=[^&]*", "$1fmt=vtt");
+        }
+        return baseUrl + (baseUrl.contains("?") ? "&" : "?") + "fmt=vtt";
+    }
+
+    private boolean isUsable(ExtractedTranscript transcript) {
+        return transcript != null && transcript.content() != null && transcript.content().trim().length() >= 20;
+    }
+
+    private String readText(JsonNode textNode) {
+        String simpleText = textNode.path("simpleText").asText("").trim();
+        if (!simpleText.isBlank()) {
+            return simpleText;
+        }
+        StringBuilder value = new StringBuilder();
+        JsonNode runs = textNode.path("runs");
+        if (runs.isArray()) {
+            for (JsonNode run : runs) {
+                value.append(run.path("text").asText(""));
+            }
+        }
+        return value.toString().trim();
+    }
+
+    @Override
+    public List<ChapterDto> extractChapters(String videoId) {
+        return discoverChapters(videoId).chapters();
+    }
+
+    @Override
+    public ChapterDiscoveryResult discoverChapters(String videoId) {
+        try {
+            var description = YoutubeChapterParser.fromDescription(youtubeDataApiService.getVideoMetadata(videoId).description());
+            log.debug("Chapter discovery source=DESCRIPTION, count={}", description.size());
+            if (!description.isEmpty()) return ChapterDiscoveryResult.found(description);
+            var data = playerResponseClient.readWatchPageData(videoId, YoutubeContentOperation.CHAPTER_DISCOVERY);
+            var player = YoutubeChapterParser.fromPlayerResponse(data.initialPlayerResponse());
+            var initial = YoutubeChapterParser.fromPlayerResponse(data.initialData());
+            log.debug("Chapter discovery source=PLAYER_RESPONSE, count={}", player.size());
+            log.debug("Chapter discovery source=INITIAL_DATA, count={}", initial.size());
+            var combined = new java.util.ArrayList<ChapterDto>(player);
+            combined.addAll(initial);
+            if (combined.isEmpty() && data.malformed()) throw new IllegalArgumentException("Malformed chapter source");
+            return ChapterDiscoveryResult.found(YoutubeChapterParser.normalize(combined));
+        } catch (org.springframework.web.client.HttpClientErrorException.NotFound ex) {
+            return ChapterDiscoveryResult.found(List.of());
+        } catch (UnprocessableVideoException ex) {
+            if ("VIDEO_NOT_FOUND".equals(ex.getErrorCode())) return ChapterDiscoveryResult.found(List.of());
+            log.warn("Chapter discovery temporarily unavailable. operation=CHAPTER_DISCOVERY, videoId={}, scope=WATCH_PAGE, errorType={}", videoId, ex.getClass().getSimpleName());
+            return ChapterDiscoveryResult.unavailable();
+        } catch (RuntimeException ex) {
+            log.warn("Chapter discovery temporarily unavailable. operation=CHAPTER_DISCOVERY, videoId={}, scope=WATCH_PAGE, errorType={}",
+                    videoId, ex.getClass().getSimpleName());
+            return ChapterDiscoveryResult.unavailable();
+        }
+    }
+
+    @Override
+    public String getVideoTitle(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).title();
+    }
+
+    @Override
+    public String getVideoChannelName(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).channelName();
+    }
+
+    @Override
+    public String getVideoDuration(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).formattedDuration();
+    }
+
+    @Override
+    public String getVideoCategoryId(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).categoryId();
+    }
+
+    @Override
+    public String getVideoDescription(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).description();
+    }
+
+    @Override
+    public List<String> getVideoTags(String videoId) {
+        return youtubeDataApiService.getVideoMetadata(videoId).tags();
+    }
+
+    private record CaptionTrack(
+            String baseUrl,
+            String languageCode,
+            String name,
+            boolean autoGenerated
+    ) {
+    }
+}

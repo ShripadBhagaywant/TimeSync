@@ -1,0 +1,42 @@
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies and generated builds
+node_modules/
+**/node_modules/
+dist/
+**/dist/
+dist-ssr/
+**/dist-ssr/
+target/
+**/target/
+build/
+coverage/
+**/coverage/
+
+# Logs, reports, temporary, backup, and crash files
+logs/
+**/logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+*.tmp
+*.bak
+*.orig
+hs_err_pid*.log
+replay_pid*.log
+
+# IDE and operating system files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db

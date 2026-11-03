@@ -1,0 +1,31 @@
+# Local environment and credentials
+.env
+.env.*
+!.env.example
+
+# Maven and application build output
+target/
+build/
+dist/
+.mvn/wrapper/maven-wrapper.jar
+
+# Logs, crash dumps, backups, and temporary files
+logs/
+*.log
+hs_err_pid*.log
+replay_pid*.log
+*.bak
+*.orig
+*.tmp
+
+# IDE and operating-system files
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+.classpath
+.project
+.settings/
+.DS_Store
+Thumbs.db

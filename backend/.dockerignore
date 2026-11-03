@@ -1,0 +1,16 @@
+.git
+.gitignore
+.idea
+.vscode
+.env
+.env.*
+target
+build
+dist
+logs
+*.log
+*.bak
+*.orig
+*.tmp
+Thumbs.db
+.DS_Store
