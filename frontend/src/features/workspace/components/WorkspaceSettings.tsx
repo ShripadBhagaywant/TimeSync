@@ -87,7 +87,7 @@ export function WorkspaceSettings({
       aria-modal="true"
       aria-labelledby="workspace-settings-title"
       tabIndex={-1}
-      className="ux-dialog absolute right-2 top-28 z-30 w-[min(18rem,calc(100vw-1rem))] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-900 shadow-xl sm:right-4 sm:top-20"
+      className="ux-dialog absolute right-2 top-[calc(100%+0.5rem)] z-40 w-[min(19rem,calc(100vw-1rem))] rounded-2xl border border-slate-200 bg-slate-50 p-3 text-slate-900 shadow-xl sm:right-3 md:right-4 lg:right-5"
     >
       <div className="mb-3 flex items-center justify-between gap-3 px-1">
         <div className="min-w-0">
@@ -107,9 +107,10 @@ export function WorkspaceSettings({
             onClick={onHome}
             aria-label="Return to Home"
             title="Go home; your draft is not cleared"
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-blue-600 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
           >
             <Home aria-hidden="true" className="h-4 w-4" />
+            <span className="text-xs font-semibold">Home</span>
           </button>
           <button
             type="button"

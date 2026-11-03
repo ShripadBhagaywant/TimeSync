@@ -37,8 +37,36 @@ interface TimeSyncDB extends DBSchema {
 
 const DB_NAME = "timesync_notes_db";
 const DB_VERSION = 3;
+export const EDITOR_DRAFT_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 const transcriptFallbackKey = (videoId: string) => `timesync-transcript-source:${videoId}`;
+const draftFallbackKey = (videoId: string) => `timesync-editor-draft:${videoId}`;
+const playlistFallbackKey = (playlistId: string) => `timesync-playlist-document:${playlistId}`;
 type TranscriptSourceRecord = TimeSyncDB["transcriptSources"]["value"];
+type EditorDraft = TimeSyncDB["drafts"]["value"];
+type PlaylistDocumentRecord = TimeSyncDB["playlistDocuments"]["value"];
+
+const readJsonFallback = <T>(key: string): T | undefined => {
+  try {
+    const value = window.localStorage.getItem(key);
+    return value ? JSON.parse(value) as T : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+const removeFallback = (key: string) => {
+  try { window.localStorage.removeItem(key); } catch { /* Storage may be disabled. */ }
+};
+
+export const writeDraftRecoverySnapshot = (draft: EditorDraft) => {
+  try { window.localStorage.setItem(draftFallbackKey(draft.videoId), JSON.stringify(draft)); return true; }
+  catch { return false; }
+};
+
+export const writePlaylistDocumentRecoverySnapshot = (document: PlaylistDocumentRecord) => {
+  try { window.localStorage.setItem(playlistFallbackKey(document.playlistId), JSON.stringify(document)); return true; }
+  catch { return false; }
+};
 
 // Bound storage waits so a blocked browser database cannot freeze the workspace.
 const storageOperation = async <T>(operation: Promise<T>): Promise<T> => runProcess("browser-storage", async () => {
@@ -231,11 +259,14 @@ export const savePlaylistWorkspace = async (workspace: PlaylistTranscriptRespons
     }
   }
   await sources.done;
+  const latestDocument = await db.get("playlistDocuments", workspace.playlistId);
+  if (latestDocument) writePlaylistDocumentRecoverySnapshot(latestDocument);
 };
 
 export const savePlaylistNoteDocument = async (
   document: PlaylistNoteDocument,
 ) => {
+  writePlaylistDocumentRecoverySnapshot(document);
   const db = await initDB();
   const tx = db.transaction("playlistDocuments", "readwrite");
   const existing = await tx.store.get(document.playlistId);
@@ -243,26 +274,45 @@ export const savePlaylistNoteDocument = async (
     await tx.store.put({ ...document, ...(existing?.workspace ? { workspace: existing.workspace, activeVideoId: existing.activeVideoId } : {}) });
   }
   await tx.done;
+  const latestDocument = await db.get("playlistDocuments", document.playlistId);
+  if (latestDocument) writePlaylistDocumentRecoverySnapshot(latestDocument);
 };
 
 export const getPlaylistNoteDocument = async (playlistId: string) => {
-  const db = await initDB();
-  return db.get("playlistDocuments", playlistId);
+  const [stored, fallback] = await Promise.all([
+    initDB().then(db => db.get("playlistDocuments", playlistId)).catch(() => undefined),
+    Promise.resolve(readJsonFallback<PlaylistDocumentRecord>(playlistFallbackKey(playlistId))),
+  ]);
+  const validFallback = fallback?.playlistId === playlistId && typeof fallback.content === "string"
+    && Number.isFinite(fallback.updatedAt) ? fallback : undefined;
+  if (validFallback && (!stored || validFallback.updatedAt >= stored.updatedAt)) {
+    return stored?.workspace && !validFallback.workspace
+      ? { ...validFallback, workspace: stored.workspace, activeVideoId: stored.activeVideoId }
+      : validFallback;
+  }
+  return stored;
 };
 
 export const deletePlaylistNoteDocument = async (playlistId: string) => {
   const db = await initDB();
   await db.delete("playlistDocuments", playlistId);
+  removeFallback(playlistFallbackKey(playlistId));
 };
 
-export type Draft = TimeSyncDB["drafts"]["value"];
+export type Draft = EditorDraft;
 
 export const getDraft = async (videoId: string) => {
-  const db = await initDB();
-  return storageOperation(db.get("drafts", videoId));
+  const [stored, fallback] = await Promise.all([
+    initDB().then(db => storageOperation(db.get("drafts", videoId))).catch(() => undefined),
+    Promise.resolve(readJsonFallback<Draft>(draftFallbackKey(videoId))),
+  ]);
+  const validFallback = fallback?.videoId === videoId && typeof fallback.content === "string"
+    && Number.isFinite(fallback.updatedAt) ? fallback : undefined;
+  return validFallback && (!stored || validFallback.updatedAt >= stored.updatedAt) ? validFallback : stored;
 };
 
 export const saveDraft = async (draft: Draft, isCurrent: () => boolean = () => true) => {
+  if (isCurrent()) writeDraftRecoverySnapshot(draft);
   const db = await initDB();
   // Preserve the autosave generation check after opening the database.
   if (isCurrent()) await db.put("drafts", draft);
@@ -271,11 +321,23 @@ export const saveDraft = async (draft: Draft, isCurrent: () => boolean = () => t
 export const deleteDraft = async (videoId: string) => {
   const db = await initDB();
   await db.delete("drafts", videoId);
+  removeFallback(draftFallbackKey(videoId));
 };
 
 export const getAllDrafts = async () => {
   const db = await initDB();
-  return db.getAll("drafts");
+  const stored = await db.getAll("drafts");
+  const latest = new Map(stored.map(draft => [draft.videoId, draft]));
+  try {
+    for (const key of Object.keys(window.localStorage).filter(key => key.startsWith("timesync-editor-draft:"))) {
+      const fallback = readJsonFallback<Draft>(key);
+      if (!fallback || fallback.videoId !== key.slice("timesync-editor-draft:".length)
+        || typeof fallback.content !== "string" || !Number.isFinite(fallback.updatedAt)) continue;
+      const previous = latest.get(fallback.videoId);
+      if (!previous || fallback.updatedAt >= previous.updatedAt) latest.set(fallback.videoId, fallback);
+    }
+  } catch { /* Keep the IndexedDB results when local storage is unavailable. */ }
+  return [...latest.values()];
 };
 
 /** Commit the applied draft and editor replacement together; failure preserves the pending draft. */
@@ -308,6 +370,7 @@ export const applyWorkspaceDraft = (response: TranscriptResponse, isCurrent: () 
     await tx.done;
     // Remove stale recovery data before writing the committed snapshot.
     try { window.localStorage.removeItem(transcriptFallbackKey(response.videoId)); } catch { /* Storage disabled. */ }
+    removeFallback(draftFallbackKey(response.videoId));
     writeTranscriptFallback(record);
     void pruneTranscriptFallbacks(db);
     return true;

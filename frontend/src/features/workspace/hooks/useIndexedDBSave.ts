@@ -1,19 +1,16 @@
 // src/features/workspace/hooks/useIndexedDBSave.ts
 import { useEffect, useRef, useState } from "react";
-import { getDraft, saveDraft, deleteDraft } from "@/lib/indexDB";
+import { EDITOR_DRAFT_TTL_MS, getDraft, saveDraft, deleteDraft } from "@/lib/indexDB";
 import { notify } from "@/lib/toast";
 
 export type SaveStatus = "idle" | "saving" | "saved" | "error";
-
-// Default TTL: 7 days in milliseconds
-const DEFAULT_TTL = 7 * 24 * 60 * 60 * 1000;
 
 export const useIndexedDBSave = (
   videoId: string,
   videoTitle: string,
   content: string,
   delay: number = 1000,
-  ttlMs: number = DEFAULT_TTL,
+  ttlMs: number = EDITOR_DRAFT_TTL_MS,
   enabled: boolean = true,
 ) => {
   const [saveStatus, setSaveStatus] = useState<SaveStatus>("idle");

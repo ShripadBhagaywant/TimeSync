@@ -8,7 +8,7 @@ import { useEditorPersistence } from "@/features/workspace/hooks/useEditorPersis
 import { useWorkspaceStore } from "@/features/workspace/store/workspaceStore";
 import { createPlaylistNoteDocument } from "@/features/workspace/utils/playlistNoteDocument";
 
-const db = vi.hoisted(() => ({ getDraft: vi.fn(), saveDraft: vi.fn(), deleteDraft: vi.fn(), saveVideoWorkspace: vi.fn(), savePlaylistNoteDocument: vi.fn(), deletePlaylistNoteDocument: vi.fn() }));
+const db = vi.hoisted(() => ({ EDITOR_DRAFT_TTL_MS: 7 * 24 * 60 * 60 * 1000, getDraft: vi.fn(), saveDraft: vi.fn(), deleteDraft: vi.fn(), saveVideoWorkspace: vi.fn(), savePlaylistNoteDocument: vi.fn(), deletePlaylistNoteDocument: vi.fn(), writeDraftRecoverySnapshot: vi.fn(), writePlaylistDocumentRecoverySnapshot: vi.fn() }));
 vi.mock("@/lib/indexDB", () => db);
 vi.mock("@/lib/toast", () => ({ notify: { success: vi.fn(), error: vi.fn(), info: vi.fn() } }));
 const video = { videoId: "one", title: "Lesson", content: "Server transcript", cleanedTranscript: "Server transcript", chapters: [], transcriptSegments: [], isEditableChapters: true } as unknown as TranscriptResponse;
@@ -17,6 +17,9 @@ beforeEach(() => {
   vi.useFakeTimers();
   vi.resetAllMocks();
   db.getDraft.mockResolvedValue(undefined);
+  db.saveDraft.mockResolvedValue(undefined);
+  db.savePlaylistNoteDocument.mockResolvedValue(undefined);
+  db.deletePlaylistNoteDocument.mockResolvedValue(undefined);
   db.saveVideoWorkspace.mockResolvedValue(undefined);
   useWorkspaceStore.getState().resetWorkspace();
   useWorkspaceStore.getState().setAutoSaveEnabled(true);
@@ -91,5 +94,22 @@ describe("editor persistence lifecycle", () => {
     unmount();
     await act(async () => { await vi.advanceTimersByTimeAsync(1000); });
     expect(db.saveDraft).not.toHaveBeenCalled();
+  });
+  it("writes the latest edit synchronously when the browser page is closing", async () => {
+    renderHook(() => useEditorPersistence(editor));
+    await flush();
+    act(() => { editor.commands.insertContent("Last moment edit"); });
+    act(() => { window.dispatchEvent(new Event("pagehide")); });
+    expect(db.writeDraftRecoverySnapshot).toHaveBeenCalledWith(expect.objectContaining({
+      videoId: "one",
+      content: "<p>Server transcriptLast moment edit</p>",
+    }));
+  });
+  it("does not create exit recovery snapshots when auto-save is disabled", async () => {
+    useWorkspaceStore.getState().setAutoSaveEnabled(false);
+    renderHook(() => useEditorPersistence(editor));
+    await flush();
+    act(() => { window.dispatchEvent(new Event("pagehide")); });
+    expect(db.writeDraftRecoverySnapshot).not.toHaveBeenCalled();
   });
 });

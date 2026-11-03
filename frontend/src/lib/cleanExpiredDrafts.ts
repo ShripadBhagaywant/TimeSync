@@ -1,8 +1,8 @@
 // src/lib/cleanExpiredDrafts.ts
-import { getAllDrafts, deleteDraft } from "@/lib/indexDB";
+import { EDITOR_DRAFT_TTL_MS, getAllDrafts, deleteDraft } from "@/lib/indexDB";
 
 export const cleanExpiredDrafts = async (
-  ttlMs: number = 7 * 24 * 60 * 60 * 1000,
+  ttlMs: number = EDITOR_DRAFT_TTL_MS,
 ) => {
   try {
     const allDrafts = await getAllDrafts();

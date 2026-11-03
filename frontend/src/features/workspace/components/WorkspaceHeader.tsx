@@ -55,8 +55,8 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
   };
 
 
-  return <>
-        <header className="mx-2 mt-2 flex min-h-14 shrink-0 flex-col items-stretch gap-2 rounded-xl border border-slate-200 bg-white px-2.5 py-2 shadow-xs sm:flex-row sm:items-center sm:gap-3 sm:px-3 md:mx-3 md:px-4 lg:mx-4 lg:px-5">
+  return <div className="relative z-30 shrink-0">
+        <header className="mx-2 mt-2 flex min-h-12 shrink-0 flex-col items-stretch gap-1.5 rounded-xl border border-slate-200 bg-white px-2 py-1.5 shadow-xs sm:flex-row sm:items-center sm:gap-2 sm:px-3 md:mx-3 md:px-4 lg:mx-4 lg:px-5">
           <div className="flex min-w-0 items-center gap-1.5 sm:flex-1 sm:gap-2">
             {isTitleEditing ? (
               <div className="flex min-w-0 flex-1 items-center gap-1.5 sm:gap-2">
@@ -91,7 +91,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
                 </h1>
                 <button
                   onClick={toggleStar}
-                  className="p-1.5 rounded-lg transition-colors cursor-pointer shrink-0 text-slate-400 hover:text-amber-400 hover:bg-slate-50"
+                  className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-amber-50 hover:text-amber-500 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 focus-visible:ring-offset-1"
                   aria-pressed={isStarred}
                   title={isStarred ? "Unstar Workspace" : "Star Workspace"}
                 >
@@ -104,7 +104,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
                     setTitleDraft(currentTitle);
                     setIsTitleEditing(true);
                   }}
-                  className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-100 hover:text-slate-700 cursor-pointer"
+                  className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
                   title="Edit title"
                   aria-label="Edit workspace title"
                 >
@@ -117,14 +117,14 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
               aria-label="Workspace settings"
               title="Workspace settings"
               aria-expanded={isSettingsOpen}
-              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+              className="inline-flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-1"
             >
               <Settings className="w-4 h-4" />
             </button>
           </div>
 
-          <div className="flex w-full min-w-0 shrink-0 items-center justify-start gap-1 overflow-x-auto border-t border-slate-100 pt-2 [scrollbar-width:none] sm:w-auto sm:max-w-[58%] sm:gap-1.5 sm:border-t-0 sm:pt-0 md:max-w-[64%] lg:max-w-none">
-            <div role="status" className="flex items-center text-xs font-medium">
+          <div className="flex w-full min-w-0 shrink-0 items-center justify-start gap-1.5 overflow-x-auto border-t border-slate-100 pt-1.5 [scrollbar-width:none] sm:w-auto sm:max-w-[58%] sm:gap-2 sm:border-t-0 sm:pt-0 md:max-w-[64%] lg:max-w-none">
+            <div role="status" className="flex min-h-7 shrink-0 items-center rounded-lg bg-slate-50 px-2 text-[11px] font-medium">
               {saveStatus === "saving" && (
                 <span className="flex items-center gap-1 text-amber-600">
                   <BrandLoader size="xs" />
@@ -156,7 +156,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
             {playlistData && (
               <button
                 onClick={togglePlaylistSidebar}
-                className="px-2.5 py-1.5 bg-red-50 text-red-700 hover:bg-red-100 font-semibold text-xs rounded-xl border border-red-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-red-200 bg-red-50 px-2.5 text-xs font-semibold text-red-700 transition-colors hover:bg-red-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-400 focus-visible:ring-offset-1"
               >
                 <ListVideo className="w-3.5 h-3.5" />
                 <span className="hidden lg:inline">
@@ -172,7 +172,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
                 isSharing ? "Creating snapshot link" : "Create snapshot link"
               }
               title="Create a read-only snapshot"
-              className="px-2.5 py-1.5 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 disabled:cursor-wait disabled:opacity-60 font-semibold text-xs rounded-xl border border-emerald-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-emerald-200 bg-emerald-50 px-2.5 text-xs font-semibold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-400 focus-visible:ring-offset-1 disabled:cursor-wait disabled:opacity-60"
             >
               {isSharing ? (
                 <BrandLoader size="xs" tone="inverse" />
@@ -184,7 +184,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
 
             <button
               onClick={handleShareWorkspace}
-              className="px-2.5 py-1.5 bg-blue-50 text-blue-600 hover:bg-blue-100 font-semibold text-xs rounded-xl border border-blue-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-blue-200 bg-blue-50 px-2.5 text-xs font-semibold text-blue-600 transition-colors hover:bg-blue-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-1"
               title="Copy the current workspace route"
             >
               <Share2 className="w-3.5 h-3.5" />
@@ -195,7 +195,7 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
               onClick={onExport}
               aria-label="Export notes"
               title="Export notes"
-              className="px-2.5 py-1.5 bg-slate-50 hover:bg-slate-100 text-slate-700 font-semibold text-xs rounded-xl border border-slate-200 transition-colors flex items-center gap-1.5 cursor-pointer"
+              className="inline-flex min-h-9 shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-2.5 text-xs font-semibold text-slate-700 transition-colors hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 focus-visible:ring-offset-1"
             >
               <Download className="w-3.5 h-3.5" />
               Export
@@ -207,5 +207,5 @@ export function WorkspaceHeader({ currentTitle, saveStatus: currentSaveStatus, i
 
 
     <WorkspaceSettings editorDisplayMode={editorDisplayMode} onEditorDisplayModeChange={onEditorDisplayModeChange} isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} onHome={() => { setIsSettingsOpen(false); onHome(); }} />
-  </>;
+  </div>;
 }

@@ -4,7 +4,15 @@ import type { Editor } from "@tiptap/react";
 import { useWorkspaceStore } from "../store/workspaceStore";
 import { useIndexedDBSave, type SaveStatus } from "./useIndexedDBSave";
 import { usePlaylistDocumentSave } from "./usePlaylistDocumentSave";
-import { getDraft, saveDraft, saveVideoWorkspace, deletePlaylistNoteDocument } from "@/lib/indexDB";
+import {
+  getDraft,
+  saveDraft,
+  saveVideoWorkspace,
+  savePlaylistNoteDocument,
+  deletePlaylistNoteDocument,
+  writeDraftRecoverySnapshot,
+  writePlaylistDocumentRecoverySnapshot,
+} from "@/lib/indexDB";
 import { markdownToEditorHtml } from "../utils/markdownToEditorHtml";
 import { notify } from "@/lib/toast";
 
@@ -116,6 +124,8 @@ export const useEditorPersistence = (
 
   // Debounced Save Hook
   const currentHtmlToSave = editor ? editor.getHTML() : editorContent;
+  const latestContentRef = useRef(currentHtmlToSave);
+  latestContentRef.current = currentHtmlToSave;
   const { saveStatus } = useIndexedDBSave(
     videoId,
     videoTitle,
@@ -135,6 +145,38 @@ export const useEditorPersistence = (
     clearedVideoId !== documentId,
   );
   const effectiveSaveStatus = playlistDocument ? playlistSaveStatus : saveStatus;
+
+  // Keep a synchronous recovery copy when the tab is hidden or closed. IndexedDB
+  // writes remain the primary store; this small localStorage snapshot protects
+  // edits made during the debounce window if the browser suspends the page.
+  useEffect(() => {
+    if (!autoSaveEnabled || !editor || hydratedVideoId !== videoId || !videoId) return;
+
+    const flushRecoverySnapshot = () => {
+      if (clearedVideoIdRef.current === documentId) return;
+      const content = latestContentRef.current;
+      if (playlistDocument) {
+        const snapshot = { ...playlistDocument, content, updatedAt: Date.now() };
+        writePlaylistDocumentRecoverySnapshot(snapshot);
+        void savePlaylistNoteDocument(snapshot).catch(() => {});
+        return;
+      }
+      if (isMetadataWorkspace(activeVideo) && editor.isEmpty) return;
+      const snapshot = { videoId, videoTitle, content, updatedAt: Date.now() };
+      writeDraftRecoverySnapshot(snapshot);
+      void saveDraft(snapshot).catch(() => {});
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "hidden") flushRecoverySnapshot();
+    };
+    window.addEventListener("pagehide", flushRecoverySnapshot);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => {
+      window.removeEventListener("pagehide", flushRecoverySnapshot);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [activeVideo, autoSaveEnabled, documentId, editor, hydratedVideoId, playlistDocument, videoId, videoTitle]);
 
   // Notify parent component of save status updates
   useEffect(() => {
