@@ -1,6 +1,8 @@
 import React from "react";
 import { QueryClientProvider } from "@tanstack/react-query";
+import { Analytics } from "@vercel/analytics/react";
 import { queryClient } from "@/lib/queryClient";
+import { sanitizeAnalyticsEvent } from "@/lib/analytics";
 import { AppToaster } from "@/components/ui/AppToaster";
 import { GlobalLoader } from "@/components/ui/GlobalLoader";
 import { GlobalMessageDialog } from "@/components/ui/GlobalMessageDialog";
@@ -16,6 +18,7 @@ export const Providers: React.FC<ProvidersProps> = ({ children }) => {
       <GlobalLoader />
       <GlobalMessageDialog />
       <AppToaster />
+      <Analytics beforeSend={sanitizeAnalyticsEvent} />
     </QueryClientProvider>
   );
 };

@@ -4,7 +4,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
 export const PrivacyPolicyPage: React.FC = () => {
-  const lastUpdated = "September 22, 2026";
+  const lastUpdated = "November 3, 2026";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-500 selection:text-white">
@@ -45,10 +45,10 @@ export const PrivacyPolicyPage: React.FC = () => {
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <Eye className="w-5 h-5 text-purple-600 mb-2" />
-            <h2 className="text-sm font-bold text-slate-900">No Tracking</h2>
+            <h2 className="text-sm font-bold text-slate-900">Anonymous Analytics</h2>
             <p className="mt-1 text-xs text-slate-600">
-              We do not sell data, profile your browsing, or sell advertising
-              slots.
+              We count visits without advertising cookies or cross-site identity
+              profiles.
             </p>
           </div>
         </div>
@@ -70,10 +70,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                 phone number).
               </li>
               <li>Authentication credentials or account passwords.</li>
-              <li>
-                Your notes, formatted tables, code snippets, or video study
-                history.
-              </li>
+              <li>Your notes, formatted tables, code snippets, or transcript content.</li>
             </ul>
           </section>
 
@@ -141,8 +138,17 @@ export const PrivacyPolicyPage: React.FC = () => {
               4. Analytics & Cookies
             </h2>
             <p className="mt-2">
-              TimeSync Notes does not use third-party tracking cookies,
-              advertising IDs, or cross-site behavioral telemetry.
+              TimeSync Notes uses Vercel Web Analytics to measure aggregated
+              visitor counts and page views. Vercel describes this as
+              cookie-free analytics; it uses a temporary visitor hash that is
+              discarded after 24 hours. Analytics may include page, timestamp,
+              referring site, broad location, device, operating system, and
+              browser information. We remove query strings and replace video,
+              playlist, and shared-note identifiers with generic route names
+              before sending page-view events. Note text, transcripts, and AI
+              prompts are not sent as analytics events. The statistics are
+              available to the project owner in the Vercel dashboard and are
+              not used for advertising.
             </p>
           </section>
 

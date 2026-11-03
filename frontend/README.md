@@ -51,3 +51,11 @@ Editor drafts are stored per video in IndexedDB and expire after seven days.
 Small per-video preferences such as custom titles and starred status are stored
 in localStorage. Transcripts and complete playlists are not stored in localStorage,
 preventing large playlists from exceeding browser storage limits.
+
+## Visitor analytics
+
+The app integrates Vercel Web Analytics for aggregated visitor and page-view
+counts. In the Vercel project dashboard, open **Analytics** and enable **Web
+Analytics**; after deployment, view counts and traffic breakdowns there. Before
+events are sent, the frontend removes query strings and replaces video IDs,
+playlist IDs, and shared-note hashes with generic route names.
