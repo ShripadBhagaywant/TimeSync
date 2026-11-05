@@ -11,7 +11,12 @@ export const notifyApiError = (
   presentation: "dialog" | "toast" = "dialog",
 ): void => {
   if (error instanceof ApiError && error.status === 502) {
-    notify.errorToast(title, BAD_GATEWAY_MESSAGE);
+    const hasKnownUpstreamCode =
+      error.code === "YOUTUBE_BOT_CHECK" || error.code === "UPSTREAM_SERVICE_UNAVAILABLE";
+    notify.errorToast(
+      title,
+      hasKnownUpstreamCode ? description : BAD_GATEWAY_MESSAGE,
+    );
     return;
   }
   if (presentation === "toast") {
