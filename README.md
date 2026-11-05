@@ -212,11 +212,23 @@ The multi-stage image builds with Maven/Java 17 and runs on a Java 17 JRE as a n
 
 ## ☁️ Deployment outline
 
-- **Backend:** deploy the `backend/` Dockerfile on Render. Set the database, Redis, provider key, allowed frontend origin, and public app URL in Render’s environment settings. Use hosted PostgreSQL and Redis-compatible services; the local Compose containers are not production services.
-- **Frontend:** deploy the `frontend/` folder on Vercel. Set the production API base URL to the Render API origin plus `/api/v1`.
-- **CORS:** set backend `ALLOWED_ORIGINS` to the exact deployed Vercel origin.
-- **Scaling:** job/cooldown state has process-local components. Use one backend instance unless those states are moved to shared infrastructure.
+### Backend on Railway
 
+The backend is a Dockerized Spring Boot service in `backend/`. In Railway, connect `ShripadBhagaywant/TimeSync` on `main`, set the service root directory to `/backend`, and let Railway detect the `Dockerfile` in that directory. The application listens on Railway's injected `PORT` value. Set the health check path to `/actuator/health`, choose Singapore to keep it near the current Neon and Upstash databases, and start with **one replica** because AI job state and YouTube cooldown state are process-local.
+
+Set production secrets in Railway's service Variables, never in Git or the Docker image:
+
+- **Neon PostgreSQL:** `SPRING_DATASOURCE_URL` should be a JDBC URL using the pooled Neon hostname and `sslmode=require`; set `SPRING_DATASOURCE_USERNAME` and `SPRING_DATASOURCE_PASSWORD` separately. The app does not read Neon’s raw `DATABASE_URL` variable directly.
+- **Upstash Redis:** set `REDIS_HOST`, `REDIS_PORT`, and `REDIS_PASSWORD` from the TCP connection details, plus `REDIS_SSL=true` and `SPRING_DATA_REDIS_SSL_ENABLED=true`. The Java backend does not use Upstash REST credentials.
+- **Provider keys:** set backend-only `YOUTUBE_API_KEY` and `GEMINI_API_KEY`.
+- **Frontend links:** set `ALLOWED_ORIGINS` to the exact production Vercel origin and `PUBLIC_APP_BASE_URL` to the public frontend URL.
+- **Capacity and retry values:** configure the AI, playlist, rate-limit, and YouTube settings as needed; the committed `backend/.env.example` documents defaults for local development.
+
+Railway runs the health check during deployment readiness, not as continuous monitoring. After deploy, check the generated backend domain at `/actuator/health`, then configure the Vercel `VITE_API_BASE_URL` as the backend origin plus `/api/v1` and redeploy the frontend.
+
+### Frontend on Vercel
+
+Deploy the `frontend/` directory on Vercel. Configure `VITE_API_BASE_URL` with the Railway backend origin plus `/api/v1`. Keep YouTube and Gemini credentials out of Vercel because provider calls are made by the backend.
 ## 🔐 Security and privacy notes
 
 - This project intentionally has **zero user authentication**. Public API routes can be called by anyone who can reach the backend. Rate limits and provider budgets help control use but do not create per-user quotas.

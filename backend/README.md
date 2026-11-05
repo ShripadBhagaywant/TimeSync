@@ -85,22 +85,58 @@ docker build -t timesync-notes-backend:local .
 
 The Docker image expects database, Redis, provider, and CORS settings through environment variables. The Compose file is for local PostgreSQL and Redis; it does not start the backend container.
 
-## ☁️ Deploy the backend to Render
+## ☁️ Deploy the backend to Railway
 
-Create a Render Web Service using the Docker runtime and this backend folder as its root directory. Render builds the checked-in **Dockerfile**; the application reads Render’s assigned **PORT** automatically.
+The backend is an isolated Docker service in this monorepo. In Railway, connect the GitHub repository `ShripadBhagaywant/TimeSync` and branch `main`, set the service root directory to `/backend`, and use the checked-in `Dockerfile` at that directory's root. Leave the start command empty so Railway uses the Docker image entrypoint. The Docker build context must be the `backend/` directory.
 
-Use Render-managed PostgreSQL and Redis-compatible Key Value services for production. Set the backend environment variables in Render’s service settings; do not commit production secrets or add them to the Docker image.
+Configure the service as follows:
 
-Configure these values for production:
+- **Region:** Singapore, close to the current Neon and Upstash database regions.
+- **Replicas:** one. AI job tracking and some YouTube cooldown state are process-local; multiple replicas can lose job continuity or enforce inconsistent cooldowns.
+- **Public networking:** generate a Railway domain for the API.
+- **Health check path:** `/actuator/health`. This endpoint returns only basic health and hides component details. Railway uses it to decide whether a new deployment is ready; configure separate monitoring for ongoing health.
+- **Port:** do not hard-code a Railway port. Spring Boot listens on Railway's injected `PORT`; `SERVER_PORT` remains a local fallback.
+- **Watch paths:** optional; if used, use `/backend/**` because Railway watch patterns are relative to the repository root.
 
-- **POSTGRES_HOST**, **POSTGRES_PORT**, **POSTGRES_DB**, **POSTGRES_USER**, and **POSTGRES_PASSWORD** from the Render database connection details. The current application expects these separate values rather than a single **DATABASE_URL**.
-- **REDIS_HOST**, **REDIS_PORT**, and **REDIS_PASSWORD** from the Redis-compatible service.
-- **YOUTUBE_API_KEY** and **GEMINI_API_KEY** for provider-backed features.
-- **ALLOWED_ORIGINS** with the exact Vercel production origin, and **PUBLIC_APP_BASE_URL** with the public frontend URL.
-- Other limits and timeouts as needed; defaults are defined in **application.yaml** and Java configuration.
+### Railway environment variables
 
-Set the Render health check path to **/actuator/health**. The API intentionally has zero authentication, so keep request limits and provider budgets conservative. AI/playlist job tracking and some upstream cooldown state are process-local; run a single backend instance until job state and those controls are shared across instances.
+Add these through the Railway service Variables screen. Do not paste production values into this README or commit an env file.
 
+**Neon PostgreSQL**
+
+- `SPRING_DATASOURCE_URL`: JDBC format using the Neon pooled hostname, database name, and `?sslmode=require` (you may also retain Neon’s `channel_binding=require` query option).
+- `SPRING_DATASOURCE_USERNAME`
+- `SPRING_DATASOURCE_PASSWORD`
+
+The application does not consume Neon’s `DATABASE_URL` or `DATABASE_URL_POOLED` names directly. Supply the equivalent JDBC URL through `SPRING_DATASOURCE_URL`.
+
+**Upstash Redis over TLS**
+
+- `REDIS_HOST`: hostname only, without scheme or port.
+- `REDIS_PORT`: normally `6379` for the TCP endpoint.
+- `REDIS_PASSWORD`: the Upstash TCP password.
+- `REDIS_SSL=true`: turns on TLS for the custom Lettuce connection used by the distributed rate limiter.
+- `SPRING_DATA_REDIS_SSL_ENABLED=true`: turns on TLS for Spring Data Redis caches.
+
+Do not use the Upstash REST URL/token for this Java Redis client.
+
+**External providers and browser URLs**
+
+- `YOUTUBE_API_KEY` and `GEMINI_API_KEY`: backend-only credentials. Rotate any values exposed in chat or logs before production.
+- `ALLOWED_ORIGINS`: exact Vercel production origin(s), comma-separated, with no trailing slash.
+- `PUBLIC_APP_BASE_URL`: public Vercel origin used when creating share links.
+
+Set other supported limits and timeouts only when needed; defaults are listed in `.env.example` and `src/main/resources/application.yaml`. Railway provides `PORT` automatically. Never put these credentials in `frontend/.env` or any `VITE_*` variable.
+
+### First deployment checks
+
+1. Confirm Railway is building from `/backend` with the Dockerfile, then wait for the deployment health check to pass.
+2. Open `https://<railway-domain>/actuator/health`; expect a successful response with no component details.
+3. Configure Vercel `VITE_API_BASE_URL` as `https://<railway-domain>/api/v1`, then redeploy the frontend.
+4. Test a real extraction, transcript import, AI draft, and share flow from the deployed frontend. Review Railway logs for database/Redis/provider connection errors, without exposing secret values.
+5. Keep one backend replica until process-local AI job state and upstream cooldown state are made shared.
+
+The API intentionally has zero authentication. Rate limits and provider budgets help manage anonymous use but are not per-user quotas. Monitor provider usage and hosting costs after launch.
 ## 🔌 API overview
 
 All routes use the **/api/v1** prefix and JSON unless otherwise noted.
