@@ -26,4 +26,19 @@ export default defineConfig({
       },
     },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        codeSplitting: {
+          groups: [
+            {
+              name: "syntax-highlighting",
+              test: /highlight\.js|lowlight/,
+              priority: 10,
+            },
+          ],
+        },
+      },
+    },
+  },
 });

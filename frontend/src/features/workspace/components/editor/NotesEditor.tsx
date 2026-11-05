@@ -10,11 +10,32 @@ import TextAlign from "@tiptap/extension-text-align";
 import { LinkExtension } from "./LinkExtension";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { TableKit } from "@tiptap/extension-table";
-import { common, createLowlight } from "lowlight";
+import { createLowlight } from "lowlight";
+import bash from "highlight.js/lib/languages/bash";
+import cpp from "highlight.js/lib/languages/cpp";
+import css from "highlight.js/lib/languages/css";
+import csharp from "highlight.js/lib/languages/csharp";
+import go from "highlight.js/lib/languages/go";
+import html from "highlight.js/lib/languages/xml";
+import java from "highlight.js/lib/languages/java";
+import javascript from "highlight.js/lib/languages/javascript";
+import json from "highlight.js/lib/languages/json";
+import kotlin from "highlight.js/lib/languages/kotlin";
+import markdown from "highlight.js/lib/languages/markdown";
+import php from "highlight.js/lib/languages/php";
+import plaintext from "highlight.js/lib/languages/plaintext";
+import python from "highlight.js/lib/languages/python";
+import ruby from "highlight.js/lib/languages/ruby";
+import rust from "highlight.js/lib/languages/rust";
+import sql from "highlight.js/lib/languages/sql";
+import typescript from "highlight.js/lib/languages/typescript";
+import xml from "highlight.js/lib/languages/xml";
+import yaml from "highlight.js/lib/languages/yaml";
 import { CustomImageNode } from "./ImageExtension";
 import { TimestampNode } from "./TimestampExtension";
 import { EditorIndentExtension, CODE_INDENT_SIZE } from "./EditorIndentExtension";
 import { EditorToolbar } from "./EditorToolbar";
+import { DEFAULT_CODE_LANGUAGE } from "./editorFormatting";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { useWorkspaceStore } from "../../store/workspaceStore";
 import { useWorkspaceShortcuts } from "../../hooks/useWorkspaceShortcuts";
@@ -23,7 +44,30 @@ import { useEditorPersistence } from "../../hooks/useEditorPersistence";
 import { notify } from "@/lib/toast";
 import type { EditorDisplayMode } from "./editorFormatting";
 
-const lowlight = createLowlight(common);
+// Register only the grammars exposed by the editor's language picker. Importing
+// `common` bundled many unused grammars into the lazy editor chunk.
+const lowlight = createLowlight({
+  bash,
+  cpp,
+  css,
+  csharp,
+  go,
+  html,
+  java,
+  javascript,
+  json,
+  kotlin,
+  markdown,
+  php,
+  plaintext,
+  python,
+  ruby,
+  rust,
+  sql,
+  typescript,
+  xml,
+  yaml,
+});
 
 interface NotesEditorProps {
   onContentChange?: (html: string) => void;
@@ -52,7 +96,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
       }),
       CodeBlockLowlight.configure({
         lowlight,
-        defaultLanguage: "javascript",
+        defaultLanguage: DEFAULT_CODE_LANGUAGE,
         enableTabIndentation: true,
         tabSize: CODE_INDENT_SIZE,
       }),

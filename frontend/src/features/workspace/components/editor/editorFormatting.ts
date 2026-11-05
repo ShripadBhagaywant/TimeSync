@@ -21,4 +21,6 @@ export const CODE_LANGUAGES = [
   { value: "rust", label: "Rust" },
 ] as const;
 
+export const DEFAULT_CODE_LANGUAGE = "javascript";
+
 export type EditorDisplayMode = "normal" | "minimized" | "maximized";

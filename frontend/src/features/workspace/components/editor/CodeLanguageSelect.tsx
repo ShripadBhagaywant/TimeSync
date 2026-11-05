@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import type { Editor } from "@tiptap/react";
 import { ChevronDown } from "lucide-react";
-import { CODE_LANGUAGES } from "./editorFormatting";
+import { CODE_LANGUAGES, DEFAULT_CODE_LANGUAGE } from "./editorFormatting";
 
 interface CodeLanguageSelectProps {
   editor: Editor;
@@ -14,9 +14,9 @@ export const CodeLanguageSelect: React.FC<CodeLanguageSelectProps> = ({
   const [menuPosition, setMenuPosition] = useState({ left: 0, top: 0 });
   const containerRef = useRef<HTMLLabelElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
-  const selectedLanguage =
-    (editor.getAttributes("codeBlock").language as string | undefined) ??
-    "plaintext";
+  const selectedLanguage = editor.isActive("codeBlock")
+    ? (editor.getAttributes("codeBlock").language as string | undefined) ?? DEFAULT_CODE_LANGUAGE
+    : DEFAULT_CODE_LANGUAGE;
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {

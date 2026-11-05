@@ -182,7 +182,10 @@ export const WorkspaceAiStatus = ({
                 <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" />
                 <div className="min-w-0">
                   <p className="break-words font-semibold">
-                    AI draft could not be completed
+                    {activeVideo.retryAfterSeconds != null &&
+                    activeVideo.retryAfterSeconds > 0
+                      ? "Gemini is temporarily unavailable"
+                      : "AI draft could not be completed"}
                   </p>
                   <p className="mt-0.5 text-[11px] leading-relaxed text-amber-800">
                     {activeVideo.aiMessage ||
@@ -191,8 +194,9 @@ export const WorkspaceAiStatus = ({
                   {activeVideo.retryAfterSeconds != null &&
                     activeVideo.retryAfterSeconds > 0 && (
                       <p className="mt-1 text-[10px] font-medium text-amber-700">
-                        Retry becomes available automatically when the
-                        provider cooldown ends.
+                        Your transcript and current editor notes are safe. The app
+                        will not retry automatically; use the retry button when
+                        its countdown ends.
                       </p>
                     )}
                 </div>
