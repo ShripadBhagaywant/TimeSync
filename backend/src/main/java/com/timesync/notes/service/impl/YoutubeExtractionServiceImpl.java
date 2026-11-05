@@ -278,13 +278,27 @@ public class YoutubeExtractionServiceImpl implements VideoExtractionService {
         }
 
         String reason = statusNode.path("reason").asText("Video is not publicly playable.");
-        String normalizedReason = reason.toLowerCase();
-        String code = normalizedReason.contains("private") ||
-                normalizedReason.contains("member") ||
+        throw playabilityFailure(reason);
+    }
+
+    static ApiException playabilityFailure(String reason) {
+        String normalizedReason = reason.toLowerCase(Locale.ROOT);
+        if (normalizedReason.contains("not a bot") ||
+                (normalizedReason.contains("bot") && normalizedReason.contains("sign in"))) {
+            return new UpstreamServiceUnavailableException(
+                    "YouTube temporarily blocked automated transcript access. Please try again later.",
+                    null,
+                    "YOUTUBE_BOT_CHECK");
+        }
+
+        String code = normalizedReason.contains("private") || normalizedReason.contains("member") ||
                 normalizedReason.contains("sign in")
                 ? "MEMBERS_ONLY_VIDEO"
                 : "VIDEO_UNAVAILABLE";
-        throw new UnprocessableVideoException(reason, code);
+        String message = "MEMBERS_ONLY_VIDEO".equals(code)
+                ? "This video is private, restricted, or members-only."
+                : "This video is currently unavailable for extraction.";
+        return new UnprocessableVideoException(message, code);
     }
 
     private List<CaptionTrack> orderTracks(List<CaptionTrack> tracks) {

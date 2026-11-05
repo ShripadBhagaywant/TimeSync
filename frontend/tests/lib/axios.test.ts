@@ -53,6 +53,19 @@ describe("extraction API errors", () => {
       .toBe("YouTube processing is busy right now. Please wait a moment and try again.");
   });
 
+  it("shows a safe message for YouTube bot checks and does not retry immediately", () => {
+    const error = new ApiError("Sign in to confirm you're not a bot", {
+      code: "YOUTUBE_BOT_CHECK",
+      status: 502,
+      traceId: "2c16b053",
+    });
+    const message = getUserFacingApiError(error, "fallback");
+
+    expect(message).toContain("YouTube temporarily blocked transcript access for this video.");
+    expect(message).not.toContain("Sign in to confirm");
+    expect(message).toContain("Reference: 2c16b053");
+    expect(shouldRetryExtraction(0, error)).toBe(false);
+  });
   it.each(["YOUTUBE_RATE_LIMITED", "YOUTUBE_BUSY", "CAPTIONS_UNAVAILABLE"])(
     "React Query does not immediately retry %s", async (code) => {
       const client = new QueryClient({defaultOptions: queryClient.getDefaultOptions()});

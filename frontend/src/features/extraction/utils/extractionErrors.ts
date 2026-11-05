@@ -11,6 +11,8 @@ const FRIENDLY_API_MESSAGES: Record<string, string> = {
     "This content could not be verified as educational or informational.",
   YOUTUBE_RATE_LIMITED:
     "YouTube is temporarily limiting transcript access. Please wait and retry.",
+  YOUTUBE_BOT_CHECK:
+    "YouTube temporarily blocked transcript access for this video. Please wait a moment and try again.",
   YOUTUBE_BUSY: "YouTube processing is busy right now. Please wait a moment and try again.",
   UPSTREAM_SERVICE_UNAVAILABLE:
     "YouTube is temporarily unavailable. Please retry shortly.",
@@ -56,7 +58,7 @@ export const getUserFacingApiError = (
 
 export const shouldRetryExtraction = (failureCount: number, error: unknown): boolean => {
   if (error instanceof ApiError && (
-    ["YOUTUBE_RATE_LIMITED", "YOUTUBE_BUSY", "CAPTIONS_UNAVAILABLE"].includes(error.code ?? "")
+    ["YOUTUBE_RATE_LIMITED", "YOUTUBE_BUSY", "CAPTIONS_UNAVAILABLE", "YOUTUBE_BOT_CHECK"].includes(error.code ?? "")
     || (error.status !== undefined && error.status >= 400 && error.status < 500)
   )) return false;
   return failureCount < 1;
