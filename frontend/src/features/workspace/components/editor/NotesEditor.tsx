@@ -16,7 +16,6 @@ import { TimestampNode } from "./TimestampExtension";
 import { EditorIndentExtension, CODE_INDENT_SIZE } from "./EditorIndentExtension";
 import { EditorToolbar } from "./EditorToolbar";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
-import { ShortcutsModal } from "@/features/workspace/components/shortcuts/ShortcutsModal";
 import { useWorkspaceStore } from "../../store/workspaceStore";
 import { useWorkspaceShortcuts } from "../../hooks/useWorkspaceShortcuts";
 import { type SaveStatus } from "../../hooks/useIndexedDBSave";
@@ -105,7 +104,7 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
       .run();
   }, [editor, currentTime, formatTime]);
 
-  const { isHelpOpen, setIsHelpOpen } = useWorkspaceShortcuts({
+  useWorkspaceShortcuts({
     onInsertTimestamp: handleInsertTimestamp,
   });
 
@@ -224,10 +223,6 @@ export const NotesEditor: React.FC<NotesEditorProps> = ({
         onCancel={() => setIsClearDialogOpen(false)}
       />
       
-      <ShortcutsModal
-        isOpen={isHelpOpen}
-        onClose={() => setIsHelpOpen(false)}
-      />
     </div>
   );
 };

@@ -161,6 +161,7 @@ export const useAiRefinement = (setIsTranscriptDialogOpen: Dispatch<SetStateActi
 
     startingRef.current.add(activeVideo.videoId);
     setStartingVideos(previous => ({ ...previous, [activeVideo.videoId]: true }));
+    notify.info("Draft starting", `Checking the transcript and preparing your ${targetLanguage} draft.`);
 
     try {
       const response = await extractionApi.refineTranscript({

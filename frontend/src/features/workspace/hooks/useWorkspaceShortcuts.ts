@@ -34,15 +34,21 @@ export const useWorkspaceShortcuts = (options: ShortcutOptions = {}) => {
 
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent) => {
-      if (isHelpOpen || event.defaultPrevented) return;
+      if (isHelpOpen || event.defaultPrevented || event.isComposing) return;
       const target = event.target;
       if (target instanceof Element) {
         if (target.closest('[role="dialog"], dialog, a[href]')) return;
-        if (target.closest('button') && (!target.closest('[aria-label="Video player"]') || event.code === "Space" || event.code === "Enter")) return;
       }
-      if (event.isComposing) return;
-
       const isModifierActive = event.ctrlKey || event.metaKey;
+
+      // Keep the help shortcut available from workspace tabs and controls.
+      if (showShortcutPanel && isModifierActive && event.code === "Slash") {
+        event.preventDefault();
+        if (!event.repeat) setIsHelpOpen(!isHelpOpen);
+        return;
+      }
+
+      if (target instanceof Element && target.closest('button') && (!target.closest('[aria-label="Video player"]') || event.code === "Space" || event.code === "Enter")) return;
       const isEditing = isUserEditing(target);
 
       // -------------------------------------------------------------
@@ -54,13 +60,6 @@ export const useWorkspaceShortcuts = (options: ShortcutOptions = {}) => {
         if (isEditing && !(target instanceof Element && target.closest('[contenteditable]:not([contenteditable="false"]), .ProseMirror'))) return;
         event.preventDefault();
         if (!event.repeat) onInsertTimestamp?.();
-        return;
-      }
-
-      // Cmd + / or Ctrl + / -> Toggle Keyboard Shortcuts Modal
-      if (showShortcutPanel && isModifierActive && event.code === "Slash") {
-        event.preventDefault();
-        setIsHelpOpen(!isHelpOpen);
         return;
       }
 

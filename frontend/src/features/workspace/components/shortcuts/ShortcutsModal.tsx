@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useMemo } from "react";
+import { createPortal } from "react-dom";
 import { Keyboard, X } from "lucide-react";
 
 interface ShortcutItem {
@@ -114,7 +115,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
 
   if (!isOpen) return null;
 
-  return (
+  return createPortal(
     <div
       className="ux-overlay fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/40 backdrop-blur-xs"
       onClick={onClose}
@@ -144,7 +145,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
           <button
             ref={closeButtonRef}
             onClick={onClose}
-            className="flex min-h-11 min-w-11 items-center justify-center p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
+            className="flex min-h-11 min-w-11 items-center justify-center p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all duration-150 active:scale-95 focus:outline-none focus:ring-2 focus:ring-slate-300 cursor-pointer"
             aria-label="Close shortcuts modal"
           >
             <X className="w-4 h-4" />
@@ -152,7 +153,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-4 max-h-[65vh] overflow-y-auto space-y-6">
+        <div className="p-3 sm:p-4 max-h-[min(70dvh,34rem)] overflow-y-auto space-y-4 sm:space-y-5">
           {shortcutGroups.map((group) => (
             <div key={group.title} className="space-y-3">
               <h4 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
@@ -163,7 +164,7 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
                 {group.shortcuts.map((sc, idx) => (
                   <div
                     key={`${sc.label}-${idx}`}
-                    className="flex items-center justify-between gap-4 py-1 text-xs"
+                    className="flex items-center justify-between gap-4 rounded-lg px-2 py-1.5 text-xs transition-colors hover:bg-slate-50"
                   >
                     <span className="text-slate-600 font-medium truncate">
                       {sc.label}
@@ -198,6 +199,5 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({
           <span className="font-medium text-slate-400">Workspace Controls</span>
         </div>
       </div>
-    </div>
-  );
+    </div>, document.body);
 };

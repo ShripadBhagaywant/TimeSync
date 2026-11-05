@@ -7,12 +7,12 @@ import { useWorkspaceRecovery } from "../hooks/useWorkspaceRecovery";
 import { useWorkspaceSharing } from "../hooks/useWorkspaceSharing";
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { TranscriptImportDialog } from "../components/transcript/TranscriptImportDialog";
-import { NotesEditor } from "../components/editor/NotesEditor";
 import type { EditorDisplayMode } from "../components/editor/editorFormatting";
 import { ExportModal } from "../components/export/ExportModal";
 import { PlaylistSidebar } from "../components/playlist/PlaylistSidebar";
 import { ShareNoteDialog } from "../components/share/ShareNoteDialog";
 import { WorkspaceAiStatus } from "../components/WorkspaceAiStatus";
+import { ShortcutsModal } from "../components/shortcuts/ShortcutsModal";
 import { useAiRefinement } from "../hooks/useAiRefinement";
 import { useWorkspaceDraftActions } from "../hooks/useWorkspaceDraftActions";
 import { useWorkspaceStore } from "../store/workspaceStore";
@@ -26,6 +26,12 @@ import { useShallow } from "zustand/react/shallow";
 import {
   hasPlaylistSection,
 } from "../utils/playlistNoteDocument";
+
+const NotesEditor = React.lazy(() =>
+  import("../components/editor/NotesEditor").then((module) => ({
+    default: module.NotesEditor,
+  })),
+);
 
 export const WorkspacePage: React.FC = () => {
   const { isLoading, error, refetch } = useWorkspaceData();
@@ -44,6 +50,8 @@ export const WorkspacePage: React.FC = () => {
     autoSaveEnabled,
     resetWorkspace,
     updatePlaylistDocumentContent,
+    isShortcutPanelOpen,
+    setIsShortcutPanelOpen,
   } = useWorkspaceStore(
     useShallow((state) => ({
       activeVideo: state.activeVideo,
@@ -58,6 +66,8 @@ export const WorkspacePage: React.FC = () => {
       autoSaveEnabled: state.autoSaveEnabled,
       resetWorkspace: state.resetWorkspace,
       updatePlaylistDocumentContent: state.updatePlaylistDocumentContent,
+      isShortcutPanelOpen: state.isShortcutPanelOpen,
+      setIsShortcutPanelOpen: state.setIsShortcutPanelOpen,
     })),
   );
 
@@ -100,6 +110,11 @@ export const WorkspacePage: React.FC = () => {
     hasPlaylistSection(playlistNoteDocument, activeVideo.videoId),
   );
   useEffect(() => { document.documentElement.style.colorScheme = "light"; }, []);
+  useEffect(() => {
+    if (!isShortcutPanelOpen) return;
+    setEditorDisplayMode("normal");
+    setMobileTab("right");
+  }, [isShortcutPanelOpen]);
   const onTranscriptImported = useCallback(() => {
     setIsTranscriptDialogOpen(false);
     setLeftTab("transcript");
@@ -248,14 +263,16 @@ export const WorkspacePage: React.FC = () => {
                 Restoring playlist notes…
               </div>
             ) : (
-              <NotesEditor
-                key={`${playlistData ? `playlist-${playlistData.playlistId}` : `video-${activeVideo.videoId}`}-${editorRevision}`}
-                editorRef={handleEditorRef}
-                onContentChange={handleEditorContentChange}
-                onSaveStatusChange={setSaveStatus}
-                displayMode={editorDisplayMode}
-                onDisplayModeChange={handleEditorDisplayModeChange}
-              />
+              <React.Suspense fallback={<div className="flex min-h-0 flex-1 items-center justify-center rounded-2xl bg-white text-sm text-slate-500"><BrandLoader size="xs" className="mr-2" />Opening notes editor…</div>}>
+                <NotesEditor
+                  key={`${playlistData ? `playlist-${playlistData.playlistId}` : `video-${activeVideo.videoId}`}-${editorRevision}`}
+                  editorRef={handleEditorRef}
+                  onContentChange={handleEditorContentChange}
+                  onSaveStatusChange={setSaveStatus}
+                  displayMode={editorDisplayMode}
+                  onDisplayModeChange={handleEditorDisplayModeChange}
+                />
+              </React.Suspense>
             )}
           </div>
         </div>
@@ -266,6 +283,11 @@ export const WorkspacePage: React.FC = () => {
         isSubmitting={isImportingTranscript}
         onClose={() => setIsTranscriptDialogOpen(false)}
         onSubmit={importTranscript}
+      />
+
+      <ShortcutsModal
+        isOpen={isShortcutPanelOpen}
+        onClose={() => setIsShortcutPanelOpen(false)}
       />
 
       <ExportModal
