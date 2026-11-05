@@ -42,11 +42,15 @@ public class RedisConfig {
     @Value("${spring.data.redis.password:}")
     private String redisPassword;
 
+    @Value("${REDIS_SSL:false}")
+    private boolean redisSsl;
+
     @Bean(destroyMethod = "shutdown")
     public RedisClient redisClient() {
         RedisURI.Builder builder = RedisURI.builder()
                 .withHost(redisHost)
-                .withPort(redisPort);
+                .withPort(redisPort)
+                .withSsl(redisSsl);
 
         if (redisPassword != null && !redisPassword.isBlank()) {
             builder.withPassword(redisPassword.toCharArray());
