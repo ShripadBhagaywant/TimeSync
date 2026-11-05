@@ -101,7 +101,10 @@ export const WorkspacePage: React.FC = () => {
   );
   useEffect(() => { document.documentElement.style.colorScheme = "light"; }, []);
   const onTranscriptImported = useCallback(() => {
-    setIsTranscriptDialogOpen(false); setLeftTab("transcript");
+    setIsTranscriptDialogOpen(false);
+    setLeftTab("transcript");
+    setEditorDisplayMode("normal");
+    setMobileTab("right");
   }, []);
   const { importTranscript, isImportingTranscript } = useWorkspaceRecovery(onTranscriptImported, setEditorRevision, isLoading);
   const { isSharing, shareUrl, closeShareDialog, handleSnapshot, handleShareWorkspace } = useWorkspaceSharing({
