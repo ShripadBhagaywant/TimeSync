@@ -5,7 +5,7 @@ chapters, local drafts, exports, playlists, and shared snapshots.
 
 ## Requirements
 
-- Node.js 20 or newer
+- Node.js 22.22.2+, 24.15.0+, or 26+ (required by the installed jsdom dependency)
 - The TimeSync backend running on port 8080
 
 ## Start locally
@@ -59,3 +59,13 @@ counts. In the Vercel project dashboard, open **Analytics** and enable **Web
 Analytics**; after deployment, view counts and traffic breakdowns there. Before
 events are sent, the frontend removes query strings and replaces video IDs,
 playlist IDs, and shared-note hashes with generic route names.
+
+## Transcript and AI data
+
+Video workspaces and editor drafts are persisted locally in IndexedDB. A share
+created by the user is sent to the backend and stored for up to 24 hours.
+Transcript text is sent to the backend for extraction and to Google Gemini when
+verification or an AI draft is requested. With Gemini's unpaid quota, Google
+may use prompts and responses to improve its services, and human reviewers may
+process them. Do not submit sensitive, confidential, or personal information.
+See the [Gemini API terms](https://ai.google.dev/gemini-api/terms).

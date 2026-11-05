@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { Clock, Code2, Menu, X, ExternalLink, Sparkles } from "lucide-react";
 
 interface NavItem {
@@ -19,7 +19,6 @@ export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const isHomePage = location.pathname === "/";
 
@@ -35,11 +34,9 @@ export const Navbar: React.FC = () => {
     e: React.MouseEvent<HTMLAnchorElement>,
     href: string,
   ) => {
-    e.preventDefault();
     if (isHomePage && href === "/") {
+      e.preventDefault();
       window.scrollTo({ top: 0, behavior: "smooth" });
-    } else {
-      navigate(href);
     }
 
     setMobileMenuOpen(false);
@@ -73,14 +70,14 @@ export const Navbar: React.FC = () => {
           className="hidden md:flex items-center gap-1 text-sm font-medium text-slate-600"
         >
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
               className="px-3.5 py-2 rounded-lg hover:text-slate-900 hover:bg-slate-100/80 transition-all"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
         </nav>
 
@@ -119,14 +116,14 @@ export const Navbar: React.FC = () => {
       {mobileMenuOpen && (
         <div className="md:hidden rounded-lg absolute top-16 left-0 w-full bg-white border-b border-slate-200 px-4 pt-4 pb-6 space-y-2 shadow-xl animate-in slide-in-from-top-2 duration-200">
           {NAV_ITEMS.map((item) => (
-            <a
+            <Link
               key={item.href}
-              href={item.href}
+              to={item.href}
               onClick={(e) => handleNavClick(e, item.href)}
               className="block px-3.5 py-2.5 rounded-xl text-sm font-semibold text-slate-700 hover:text-blue-600 hover:bg-slate-50 transition-colors"
             >
               {item.label}
-            </a>
+            </Link>
           ))}
 
           <div className="pt-4 mt-2 border-t border-slate-100">

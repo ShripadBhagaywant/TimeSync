@@ -170,7 +170,7 @@ For throttling responses, clients should honor both the **Retry-After** header a
 
 ### AI draft
 
-AI refinement is a separate asynchronous operation. The requested output language is passed to the AI workflow. Provider throttling and temporary failures return retryable status; a failed job does not replace the source transcript or editor content.
+AI refinement is a separate asynchronous operation. The requested output language is passed to the AI workflow. Provider throttling and temporary failures return retryable status; a failed job does not replace the source transcript or editor content. Transcript text is sent to Gemini for verification and drafting. With Gemini's unpaid quota, Google may use submitted prompts and responses to improve its services, and human reviewers may process them. Do not submit sensitive, confidential, or personal information. See the [Gemini API terms](https://ai.google.dev/gemini-api/terms).
 
 ### Playlist
 

@@ -1,10 +1,11 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import { HardDrive, Lock, Eye, Cpu } from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
 export const PrivacyPolicyPage: React.FC = () => {
-  const lastUpdated = "November 3, 2026";
+  const lastUpdated = "November 6, 2026";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-500 selection:text-white">
@@ -26,11 +27,11 @@ export const PrivacyPolicyPage: React.FC = () => {
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
             <HardDrive className="w-5 h-5 text-blue-600 mb-2" />
             <h2 className="text-sm font-bold text-slate-900">
-              100% Local-First
+              Local-First Workspace
             </h2>
             <p className="mt-1 text-xs text-slate-600">
-              Your notes, drafts, and edits never touch our database. They
-              remain on your device.
+              Your workspace stays in this browser unless you choose to create
+              an AI draft or share a note.
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -39,8 +40,7 @@ export const PrivacyPolicyPage: React.FC = () => {
               Zero Authentication
             </h2>
             <p className="mt-1 text-xs text-slate-600">
-              No sign-up, no login, and no passwords. We do not track your
-              identity.
+              No sign-up, login, or account profile is required to use the app.
             </p>
           </div>
           <div className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -57,12 +57,13 @@ export const PrivacyPolicyPage: React.FC = () => {
         <div className="mt-10 space-y-8 text-sm leading-7 text-slate-700">
           <section>
             <h2 className="text-lg font-bold text-slate-900">
-              1. Information We Do Not Collect
+              1. Information and Content Handling
             </h2>
             <p className="mt-2">
-              TimeSync Notes is built on a{" "}
-              <strong>Zero Auth, Local-First</strong> paradigm. Because you do
-              not need an account to use TimeSync Notes, we do not collect:
+              TimeSync Notes does not require an account or ask you for a name,
+              email address, phone number, or login credentials. Hosting and
+              provider services may process technical request data under their
+              own policies:
             </p>
             <ul className="mt-2 list-disc list-inside space-y-1 text-slate-600 pl-2">
               <li>
@@ -70,7 +71,7 @@ export const PrivacyPolicyPage: React.FC = () => {
                 phone number).
               </li>
               <li>Authentication credentials or account passwords.</li>
-              <li>Your notes, formatted tables, code snippets, or transcript content.</li>
+              <li>Advertising profiles or cross-site identity profiles.</li>
             </ul>
           </section>
 
@@ -79,9 +80,10 @@ export const PrivacyPolicyPage: React.FC = () => {
               2. Local Storage & Local Data Ownership
             </h2>
             <p className="mt-2">
-              When you work on video notes, import transcripts, or create
-              structured outlines, all data is stored exclusively in your
-              browser’s local storage (`localStorage` / `IndexedDB`).
+              Video workspaces, transcripts, chapters, and editor drafts are
+              saved in this browser’s IndexedDB. They are not uploaded as a
+              general cloud backup. The following actions send the relevant
+              content to the backend or a provider:
             </p>
             <ul className="mt-2 list-disc list-inside space-y-1 text-slate-600 pl-2">
               <li>
@@ -90,8 +92,15 @@ export const PrivacyPolicyPage: React.FC = () => {
               </li>
               <li>
                 <strong>Exports & Snapshots:</strong> Exported files or local
-                JSON/Markdown snapshots are generated locally on your client
-                device.
+                JSON/Markdown snapshots are generated on your device. If you
+                choose Share, the note snapshot is sent to the backend and
+                stored for up to 24 hours so recipients can open its read-only
+                link.
+              </li>
+              <li>
+                <strong>Transcript processing:</strong> Video identifiers and
+                transcript-related requests are sent to the TimeSync backend.
+                Imported transcript text is sent when you submit it.
               </li>
             </ul>
           </section>
@@ -112,10 +121,10 @@ export const PrivacyPolicyPage: React.FC = () => {
                   Media
                 </h3>
                 <p className="mt-1 text-xs text-slate-600 leading-5">
-                  When you input a YouTube link or play a video, requests are
-                  sent directly to YouTube's servers to load video metadata,
-                  player controls, and public captions. Subject to YouTube's
-                  Privacy Policy.
+                  The TimeSync backend requests video metadata and available
+                  public captions from YouTube. The embedded video player also
+                  connects to YouTube. These services are subject to the{" "}
+                  <a className="font-medium text-blue-700 underline" href="https://policies.google.com/privacy" target="_blank" rel="noopener noreferrer">Google Privacy Policy</a>.
                 </p>
               </div>
               <div className="rounded-lg border border-slate-200 bg-slate-50 p-4">
@@ -124,10 +133,14 @@ export const PrivacyPolicyPage: React.FC = () => {
                   Refinement
                 </h3>
                 <p className="mt-1 text-xs text-slate-600 leading-5">
-                  If you explicitly request AI refinement or translation,
-                  transcript text is submitted to external AI processing
-                  services solely for generating structured notes. Prompt inputs
-                  are not retained or used for training underlying AI models.
+                  When you request AI verification and drafting, transcript
+                  text is sent to Google Gemini. If a request uses Gemini’s
+                  unpaid quota, Google’s terms say submitted prompts and
+                  responses may be used to improve its services and may be
+                  reviewed by people. Do not submit sensitive, confidential,
+                  or personal information. Data handling differs for paid
+                  service use. See the{" "}
+                  <a className="font-medium text-blue-700 underline" href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini API terms</a>.
                 </p>
               </div>
             </div>
@@ -149,6 +162,9 @@ export const PrivacyPolicyPage: React.FC = () => {
               prompts are not sent as analytics events. The statistics are
               available to the project owner in the Vercel dashboard and are
               not used for advertising.
+              {" "}
+              See Vercel’s{" "}
+              <a className="font-medium text-blue-700 underline" href="https://vercel.com/docs/analytics/privacy-policy" target="_blank" rel="noopener noreferrer">Web Analytics privacy details</a>.
             </p>
           </section>
 
@@ -157,9 +173,9 @@ export const PrivacyPolicyPage: React.FC = () => {
               5. Contact Information
             </h2>
             <p className="mt-2">
-              If you have any questions or feedback regarding our local-first
-              privacy architecture, please open an issue on our official GitHub
-              repository.
+              If you have questions or feedback, open an issue in the{" "}
+              <a className="font-medium text-blue-700 underline" href="https://github.com/ShripadBhagaywant/TimeSync/issues" target="_blank" rel="noopener noreferrer">TimeSync Notes repository</a>.
+              {" "}You can also review our <Link className="font-medium text-blue-700 underline" to="/terms">Terms of Service</Link>.
             </p>
           </section>
         </div>

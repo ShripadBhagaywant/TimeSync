@@ -1,10 +1,11 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {AlertTriangle, CheckCircle2} from "lucide-react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 
 export const TermsOfServicePage: React.FC = () => {
-  const lastUpdated = "September 22, 2026";
+  const lastUpdated = "November 6, 2026";
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col selection:bg-blue-500 selection:text-white">
@@ -89,6 +90,12 @@ export const TermsOfServicePage: React.FC = () => {
                 We cannot recover lost notes caused by clearing browser cache,
                 resetting local storage, or browser corruption.
               </li>
+              <li>
+                If you create a share link, its read-only snapshot is stored by
+                the backend for up to 24 hours. Transcript text is sent to
+                Google Gemini when you request AI verification or drafting;
+                provider terms apply.
+              </li>
             </ul>
           </section>
 
@@ -97,10 +104,12 @@ export const TermsOfServicePage: React.FC = () => {
               4. Third-Party Content & YouTube Availability
             </h2>
             <p className="mt-2">
-              TimeSync Notes interacts with YouTube video streams and transcript
-              outputs. We do not own, control, or guarantee the ongoing
-              availability of third-party video content, captions, or YouTube
-              APIs.
+              TimeSync Notes relies on external services for video playback,
+              source metadata, public captions, analytics, and optional AI
+              processing. Their availability and terms are controlled by those
+              providers. YouTube use is subject to its{" "}
+              <a className="font-medium text-blue-700 underline" href="https://www.youtube.com/t/terms" target="_blank" rel="noopener noreferrer">Terms of Service</a>; Gemini processing is subject to the{" "}
+              <a className="font-medium text-blue-700 underline" href="https://ai.google.dev/gemini-api/terms" target="_blank" rel="noopener noreferrer">Gemini API terms</a>.
             </p>
           </section>
 
@@ -128,6 +137,16 @@ export const TermsOfServicePage: React.FC = () => {
               We reserve the right to update or modify these Terms at any time.
               Changes will be reflected by updating the "Last Updated" date at
               the top of this page.
+            </p>
+          </section>
+
+          <section>
+            <h2 className="text-lg font-bold text-slate-900">
+              7. Privacy and Support
+            </h2>
+            <p className="mt-2">
+              Review the <Link className="font-medium text-blue-700 underline" to="/privacy">Privacy Policy</Link> for details about local storage, sharing, analytics, and transcript processing. For questions or to report an issue, use the{" "}
+              <a className="font-medium text-blue-700 underline" href="https://github.com/ShripadBhagaywant/TimeSync/issues" target="_blank" rel="noopener noreferrer">project issue tracker</a>.
             </p>
           </section>
         </div>

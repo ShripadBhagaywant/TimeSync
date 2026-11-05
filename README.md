@@ -87,7 +87,7 @@ TimeSync/
 
 ### Prerequisites
 
-- **Node.js 20+** and npm
+- **Node.js 22.22.2+, 24.15.0+, or 26+** and npm (the frontend's jsdom dependency sets this engine requirement)
 - **Java 17**
 - Docker Desktop with Docker Compose
 - YouTube Data API and Gemini API keys for provider-backed features
@@ -236,6 +236,7 @@ Deploy the `frontend/` directory on Vercel. Configure `VITE_API_BASE_URL` with t
 - Keep API keys in backend environment settings only. Rotate keys immediately if they are accidentally exposed.
 - Configure CORS narrowly and do not trust forwarded headers unless a trusted proxy sanitizes them.
 - Workspace and draft persistence is browser-local (IndexedDB); shared-note snapshots are stored by the backend and expire after the configured TTL (24 hours by default).
+- Transcript text is sent to the backend for processing and to Gemini when verification or AI drafting is requested. With Gemini's unpaid quota, Google may use submitted prompts and responses to improve its services and may have human reviewers process them. Do not submit sensitive, confidential, or personal information. See the [Gemini API terms](https://ai.google.dev/gemini-api/terms).
 
 ## 📜 License
 

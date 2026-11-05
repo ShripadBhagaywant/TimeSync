@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import {
   BookOpenCheck,
   Braces,
@@ -190,6 +191,20 @@ const HeroSection: React.FC = () => (
           playback, and gives you the final say over structure, code, tables,
           chapters, and exports.
         </p>
+        <div className="mt-5 flex flex-wrap items-center gap-3">
+          <Link
+            to="/workspace"
+            className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            Open workspace <ChevronRight className="h-4 w-4" />
+          </Link>
+          <Link
+            to="/"
+            className="inline-flex min-h-10 items-center justify-center rounded-lg px-3 py-2 text-sm font-semibold text-slate-600 transition-colors hover:bg-slate-100 hover:text-slate-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+          >
+            Back to home
+          </Link>
+        </div>
       </div>
 
       <div className="rounded-2xl border border-slate-200 bg-slate-950 p-4 text-white shadow-lg shadow-slate-200/60 sm:p-5">
