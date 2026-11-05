@@ -34,7 +34,7 @@ function SettingSwitch({
       aria-label={label}
       aria-checked={checked}
       onClick={onChange}
-      className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-colors hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2"
+      className="flex min-h-14 w-full items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-left transition-all duration-150 hover:border-slate-300 hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 cursor-pointer active:scale-[0.99]"
     >
       <span className="min-w-0">
         <span className="block text-xs font-semibold text-slate-800">{label}</span>
@@ -107,7 +107,7 @@ export function WorkspaceSettings({
             onClick={onHome}
             aria-label="Return to Home"
             title="Go home; your draft is not cleared"
-            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-blue-700 transition-colors hover:bg-blue-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
+            className="inline-flex h-9 items-center justify-center gap-1.5 rounded-xl px-2 text-blue-700 transition-all duration-150 hover:bg-blue-50 active:scale-[0.98] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer"
           >
             <Home aria-hidden="true" className="h-4 w-4" />
             <span className="text-xs font-semibold">Home</span>
@@ -116,7 +116,7 @@ export function WorkspaceSettings({
             type="button"
             onClick={onClose}
             aria-label="Close workspace settings"
-            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer"
+            className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-400 transition-all duration-150 hover:bg-slate-200 hover:text-slate-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400 cursor-pointer"
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -147,7 +147,7 @@ export function WorkspaceSettings({
                     onClose();
                   }}
                   className={
-                    "min-h-10 rounded-lg px-1.5 text-[10px] font-semibold transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 " +
+                    "min-h-10 rounded-lg px-1.5 text-[10px] font-semibold transition-all duration-150 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 cursor-pointer active:scale-[0.98] " +
                     (editorDisplayMode === mode
                       ? "bg-blue-600 text-white shadow-sm"
                       : "bg-slate-100 text-slate-600 hover:bg-slate-200")
@@ -192,7 +192,7 @@ export function WorkspaceSettings({
       <button
         type="button"
         onClick={onClose}
-        className="mt-3 min-h-11 w-full rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
+        className="mt-3 min-h-11 w-full rounded-xl bg-slate-900 px-3 text-xs font-semibold text-white shadow-sm transition-all duration-150 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 cursor-pointer active:scale-[0.99]"
       >
         Done
       </button>
