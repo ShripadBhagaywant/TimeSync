@@ -92,6 +92,25 @@ class MetadataWorkspaceTest {
         verify(classifier, never()).validateEducationalContent(any(), any(), any(), any(), any(), any());
     }
 
+    @Test void youtubeBotCheckOpensTranscriptImportWorkspaceWithoutVerifyingOrQueueingAi() {
+        when(extraction.extractTranscript(VIDEO, "Original"))
+                .thenThrow(new UpstreamServiceUnavailableException(
+                        "YouTube temporarily blocked automated transcript access.", null, "YOUTUBE_BOT_CHECK"));
+
+        var response = service.extractAndProcess(new ExtractVideoRequest(VIDEO));
+
+        assertEquals(NoteSource.METADATA, response.noteSource());
+        assertEquals(TranscriptAvailability.UNAVAILABLE, response.transcriptAvailability());
+        assertTrue(response.content().isBlank());
+        assertTrue(response.transcriptSegments().isEmpty());
+        assertFalse(response.aiRefinementEnabled());
+        assertEquals(AiProcessingStatus.NOT_APPLICABLE, response.aiStatus());
+        assertEquals(com.timesync.notes.guardrail.VerificationLevel.UNVERIFIED, response.verificationLevel());
+        assertEquals(com.timesync.notes.guardrail.ContentReasonCode.TRANSCRIPT_UNAVAILABLE, response.contentReasonCode());
+        verify(classifier, never()).validateEducationalContent(any(), any(), any(), any(), any(), any());
+        verifyNoInteractions(regex, jobs);
+    }
+
     static Stream<RuntimeException> temporaryFailures() {
         return Stream.of(new UpstreamRateLimitException("Cooldown", 47),
                 new UpstreamServiceUnavailableException("Unavailable", null),

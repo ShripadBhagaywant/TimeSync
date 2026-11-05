@@ -87,13 +87,22 @@ public class TranscriptCleaningServiceImpl implements TranscriptCleaningService 
             log.info("Captions are unavailable for video {}. Returning metadata-only workspace.", videoId);
             logDecision(videoId, ContentPolicyDecision.unverified(ContentReasonCode.TRANSCRIPT_UNAVAILABLE));
             return createMetadataOnlyResponse(videoId, title, channelName, duration, chapters).withChapterAvailability(chapterResult.availability());
-        } catch (UpstreamRateLimitException | UpstreamServiceUnavailableException ex) {
-            log.warn(
-                    "Educational verification is temporarily unavailable for video {}. Cause: {}",
-                    videoId,
-                    ex.getClass().getSimpleName()
-            );
+        } catch (UpstreamServiceUnavailableException ex) {
+            if ("YOUTUBE_BOT_CHECK".equals(ex.getErrorCode())) {
+                log.warn("YouTube bot-check blocked caption discovery. operation=WATCH_PAGE, scope=WATCH_PAGE, videoId={}. Opening a workspace for manual transcript import; transcript remains unverified.", videoId);
+                ContentPolicyDecision decision = ContentPolicyDecision.unverified(ContentReasonCode.TRANSCRIPT_UNAVAILABLE);
+                logDecision(videoId, decision);
+                return createMetadataOnlyResponse(videoId, title, channelName, duration, chapters)
+                        .withChapterAvailability(chapterResult.availability())
+                        .withContentPolicy(decision);
+            }
 
+            log.warn("Transcript extraction is temporarily unavailable for video {}. Cause: {}",
+                    videoId, ex.getClass().getSimpleName());
+            throw ex;
+        } catch (UpstreamRateLimitException ex) {
+            log.warn("YouTube transcript access was rate-limited for video {}. retryAfterSeconds={}",
+                    videoId, ex.getRetryAfterSeconds());
             throw ex;
         }
 
