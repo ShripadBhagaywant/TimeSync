@@ -42,12 +42,14 @@ export const useEditorPersistence = (
   const loadedVideoIdRef = useRef<string | null>(null);
   const isClearingRef = useRef(false);
   const clearedVideoIdRef = useRef<string | null>(null);
+  const latestContentRef = useRef("");
 
   useEffect(() => {
     if (!editor) return;
     const onUpdate = () => {
       const html = editor.getHTML();
       setEditorContent(html);
+      latestContentRef.current = html;
       if (!isClearingRef.current && clearedVideoIdRef.current) {
         clearedVideoIdRef.current = null;
         setClearedVideoId(null);
@@ -78,6 +80,7 @@ export const useEditorPersistence = (
         if (playlistDocument) {
           editor.commands.setContent(playlistDocument.content || "<p></p>");
           setEditorContent(playlistDocument.content);
+          latestContentRef.current = playlistDocument.content;
           onContentChange?.(playlistDocument.content);
         } else if (savedDraft) {
           // An empty saved draft is an intentional clear marker; don't repopulate
@@ -85,6 +88,7 @@ export const useEditorPersistence = (
           const savedContent = savedDraft.content || "";
           editor.commands.setContent(savedContent || "<p></p>");
           setEditorContent(savedContent);
+          latestContentRef.current = savedContent;
           onContentChange?.(savedContent);
         } else if (activeVideo?.cleanedTranscript || activeVideo?.content) {
           const initialContent =
@@ -93,10 +97,12 @@ export const useEditorPersistence = (
 
           editor.commands.setContent(formattedHtml);
           setEditorContent(formattedHtml);
+          latestContentRef.current = formattedHtml;
           onContentChange?.(formattedHtml);
         } else {
           editor.commands.setContent("<p></p>");
           setEditorContent("");
+          latestContentRef.current = "";
           onContentChange?.("");
         }
 
@@ -124,8 +130,6 @@ export const useEditorPersistence = (
 
   // Debounced Save Hook
   const currentHtmlToSave = editor ? editor.getHTML() : editorContent;
-  const latestContentRef = useRef(currentHtmlToSave);
-  latestContentRef.current = currentHtmlToSave;
   const { saveStatus } = useIndexedDBSave(
     videoId,
     videoTitle,

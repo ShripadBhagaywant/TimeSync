@@ -112,8 +112,11 @@ export const WorkspacePage: React.FC = () => {
   useEffect(() => { document.documentElement.style.colorScheme = "light"; }, []);
   useEffect(() => {
     if (!isShortcutPanelOpen) return;
-    setEditorDisplayMode("normal");
-    setMobileTab("right");
+    const frameId = window.requestAnimationFrame(() => {
+      setEditorDisplayMode("normal");
+      setMobileTab("right");
+    });
+    return () => window.cancelAnimationFrame(frameId);
   }, [isShortcutPanelOpen]);
   const onTranscriptImported = useCallback(() => {
     setIsTranscriptDialogOpen(false);
