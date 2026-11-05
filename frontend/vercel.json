@@ -1,5 +1,6 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "installCommand": "env -u npm_config_cache_dir -u NPM_CONFIG_CACHE_DIR npm ci",
   "rewrites": [
     {
       "source": "/(.*)",
