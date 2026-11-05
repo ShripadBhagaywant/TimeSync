@@ -16,23 +16,6 @@ export default defineConfig({
     setupFiles: ["./tests/setup.ts"],
     environment: "node",
   },
-  build: {
-    rolldownOptions: {
-      output: {
-        codeSplitting: {
-          groups: [
-            {
-              name: "editor-vendor",
-              test: /node_modules[\\/](?:@tiptap|prosemirror|lowlight|highlight\.js)[\\/]/,
-              minSize: 20_000,
-              maxSize: 350_000,
-              priority: 20,
-            },
-          ],
-        },
-      },
-    },
-  },
   server: {
     port: 5173,
     proxy: {
