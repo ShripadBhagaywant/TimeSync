@@ -1,6 +1,7 @@
 import { ApiError } from "@/lib/apiError";
 
 const FRIENDLY_API_MESSAGES: Record<string, string> = {
+  RATE_LIMIT_EXCEEDED: "Too many requests. Please wait before trying again.",
   AI_PROVIDER_UNAVAILABLE:
     "Educational verification is temporarily unavailable. Please wait and retry.",
   AI_PROVIDER_QUOTA_EXCEEDED:
@@ -8,7 +9,7 @@ const FRIENDLY_API_MESSAGES: Record<string, string> = {
   CAPTIONS_UNAVAILABLE:
     "This video cannot be processed because its transcript is unavailable.",
   NON_EDUCATIONAL_CONTENT:
-    "This content could not be verified as educational or informational.",
+    "TimeSync Notes supports educational or informational videos. This video could not be verified for that purpose.",
   YOUTUBE_RATE_LIMITED:
     "YouTube is temporarily limiting transcript access. Please wait and retry.",
   YOUTUBE_BOT_CHECK:
@@ -41,9 +42,11 @@ export const getUserFacingApiError = (
 ): string => {
   if (error instanceof ApiError) {
     const friendly = error.code ? FRIENDLY_API_MESSAGES[error.code] : undefined;
-    let message = error.code === "YOUTUBE_RATE_LIMITED"
-      ? `YouTube is temporarily limiting transcript access. Retry in about ${error.retryAfterSeconds ?? 60} seconds.`
-      : friendly || error.message || fallback;
+    let message = error.code === "RATE_LIMIT_EXCEEDED" && error.retryAfterSeconds != null
+      ? `You have reached the request limit. Try again in about ${error.retryAfterSeconds} seconds.`
+      : error.code === "YOUTUBE_RATE_LIMITED"
+        ? `YouTube is temporarily limiting transcript access. Retry in about ${error.retryAfterSeconds ?? 60} seconds.`
+        : friendly || error.message || fallback;
     if (error.retryAfterSeconds != null) {
       if (error.code === "AI_PROVIDER_UNAVAILABLE") {
         message = `Educational verification is temporarily unavailable. Retry in about ${error.retryAfterSeconds} seconds.`;

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { useNavigate } from "react-router-dom";
 import { ArrowRight, ListVideo } from "lucide-react";
 import { notify } from "@/lib/toast";
+import { ApiError } from "@/lib/apiError";
 import { BrandLoader } from "@/components/ui/BrandLoader";
 import { getUserFacingApiError } from "@/features/extraction/utils/extractionErrors";
 import { notifyApiError } from "@/lib/apiErrorNotifications";
@@ -164,7 +165,9 @@ export const UrlInputForm: React.FC = () => {
             pendingOperations.current.delete(loadingId);
             notifyApiError(
               error,
-              "Extraction Failed",
+              error instanceof ApiError && error.code === "NON_EDUCATIONAL_CONTENT"
+                ? "Video not eligible"
+                : "Extraction Failed",
               getUserFacingApiError(
                 error,
                 "Unable to process video. Please verify the URL.",

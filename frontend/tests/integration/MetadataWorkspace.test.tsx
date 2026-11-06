@@ -51,11 +51,11 @@ describe("metadata workspace and import transition", () => {
     expect(screen.queryByRole("textbox", { name: "Manual notes" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Create structured draft" })).toBeNull();
   });
-  it.each(["EDUCATIONAL", "INFORMATIONAL"] as const)("renders verified %s without classifying the title", (contentEligibility) => {
+  it.each(["EDUCATIONAL", "INFORMATIONAL"] as const)("renders verified %s without classifying the title", async (contentEligibility) => {
     useWorkspaceStore.getState().setActiveVideo({ ...imported, contentEligibility, verificationLevel: "SEMANTIC_VERIFIED", title: "Official Movie Trailer" });
     render(<MemoryRouter><WorkspacePage /></MemoryRouter>);
     expect(screen.getByRole("button", { name: "Create structured draft" })).toBeTruthy();
-    expect(screen.getByRole("textbox", { name: "Manual notes" })).toBeTruthy();
+    expect(await screen.findByRole("textbox", { name: "Manual notes" })).toBeTruthy();
   });
   it("renders provider outages as temporary errors", () => {
     workspace.error = new ApiError("Provider failed", { code: "AI_PROVIDER_UNAVAILABLE", status: 503 });

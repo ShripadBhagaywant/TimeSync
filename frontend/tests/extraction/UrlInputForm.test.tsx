@@ -24,6 +24,16 @@ describe("initial extraction outcomes", () => {
     expect(mocks.success).toHaveBeenCalledWith("Video workspace ready", expect.stringContaining("import a transcript"));
     expect(mocks.error).not.toHaveBeenCalled();
   });
+  it("labels non-educational rejection as an eligibility decision", async () => {
+    mocks.mutate.mockImplementation((_request, options) => options.onError(new ApiError("Rejected", { code: "NON_EDUCATIONAL_CONTENT", status: 422 })));
+    submit();
+    await waitFor(() => expect(mocks.errorToast).toHaveBeenCalledWith(
+      "Video not eligible",
+      "TimeSync Notes supports educational or informational videos. This video could not be verified for that purpose.",
+    ));
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
   it("keeps a rate-limit response as an error with its delay and no navigation", async () => {
     mocks.mutate.mockImplementation((_request, options) => options.onError(new ApiError("Limited", { code: "YOUTUBE_RATE_LIMITED", status: 429, retryAfterSeconds: 47 })));
     submit();

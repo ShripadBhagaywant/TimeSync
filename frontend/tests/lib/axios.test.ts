@@ -38,6 +38,13 @@ describe("extraction API errors", () => {
     } finally { vi.restoreAllMocks(); }
   });
 
+  it("shows the app request-limit retry delay from Retry-After", async () => {
+    const error = await rejectResponse({code: "RATE_LIMIT_EXCEEDED"}, {"retry-after": "35"}).catch((caught: unknown) => caught);
+    expect(error).toMatchObject({code: "RATE_LIMIT_EXCEEDED", status: 429, retryAfterSeconds: 35});
+    expect(getUserFacingApiError(error, "fallback")).toBe("You have reached the request limit. Try again in about 35 seconds.");
+    expect(shouldRetryExtraction(0, error)).toBe(false);
+  });
+
   it("shows the retry delay and defaults to sixty seconds", () => {
     expect(getUserFacingApiError(new ApiError("old", {code: "YOUTUBE_RATE_LIMITED", retryAfterSeconds: 47}), "fallback"))
       .toContain("Retry in about 47 seconds.");
