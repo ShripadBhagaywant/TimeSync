@@ -210,6 +210,40 @@ class EducationalContentClassifierTest {
     }
 
     @Test
+    void rejectsMovieDiscussionWhenModelLabelConflictsWithItsEntertainmentEvidence() {
+        mockAiResult(new EducationalEvaluationResult(
+                ContentEligibility.EDUCATIONAL,
+                "MOVIE_DISCUSSION",
+                "Commentary and audience reaction to a movie producer's adaptation choices."
+        ));
+
+        assertThrows(NonEducationalContentException.class, () -> classifier.validateEducationalContent(
+                "RAMAYANA Part 1: Discussion - Namit Malhotra Really Cooked??",
+                "Mr. Super Lad",
+                "",
+                "A creator discusses a movie adaptation, producer choices, and audience reactions.",
+                "English"
+        ));
+    }
+
+    @Test
+    void acceptsFactualFilmHistoryDespiteMediaSubject() {
+        mockAiResult(new EducationalEvaluationResult(
+                ContentEligibility.INFORMATIONAL,
+                "FILM_HISTORY",
+                "Historical analysis of how cinema technology developed."
+        ));
+
+        assertDoesNotThrow(() -> classifier.validateEducationalContent(
+                "A History of Film Technology",
+                "Documentary Channel",
+                "",
+                "This documentary explains the history of film technology.",
+                "English"
+        ));
+    }
+
+    @Test
     void rejectsUnknownClassification() {
 
         mockAiResult(

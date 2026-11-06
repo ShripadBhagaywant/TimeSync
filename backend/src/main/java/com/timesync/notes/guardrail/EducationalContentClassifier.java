@@ -107,6 +107,10 @@ public class EducationalContentClassifier {
             throw new AiProviderUnavailableException("Educational verification is temporarily unavailable. Please retry shortly.", null, 30);
         }
         var decision = ContentPolicyDecision.semantic(result.eligibility());
+        if (decision.eligibility().isAllowed() && describesEntertainmentPurpose(result)) {
+            // Do not accept a contradictory model response that labels a review/reaction as educational.
+            decision = ContentPolicyDecision.semantic(ContentEligibility.ENTERTAINMENT);
+        }
         if (decision.eligibility().isRejected()) throw new NonEducationalContentException(decision);
         verifiedContentCache.put(cacheKey, decision);
         return decision;
@@ -130,8 +134,13 @@ public class EducationalContentClassifier {
                     ENTERTAINMENT: movie/TV reviews, plot recaps, trailers, reactions, celebrity commentary,
                     gaming for fun, music/performance, sports hype/commentary, vlogs, comedy, or promotion
                     as the primary purpose. Occasional facts or educational words do not change that purpose.
-                    Technical reviews, sports science and tutorials may be eligible when teaching dominates.
+                    This includes fan discussions and commentary about a movie adaptation, its producer/cast,
+                    creative choices, hype, or audience reaction. A discussion of an epic, history, or mythology
+                    is informational only when factual/cultural analysis dominates independently of movie promotion
+                    or reaction. Technical reviews, sports science and tutorials may be eligible when teaching dominates.
                     For mixed content judge the dominant purpose, not whether anything useful is mentioned.
+                    In the reason, state the evidence for the dominant purpose. Do not call a reaction/review
+                    educational just because it contains explanations, facts, or uses an academic subject as its topic.
                     UNKNOWN: insufficient evidence or unresolved primary purpose. Do not guess approval.
                     Return exactly one JSON object with three string fields and no markdown:
                     "eligibility" (EDUCATIONAL, INFORMATIONAL, ENTERTAINMENT or UNKNOWN),
@@ -155,6 +164,16 @@ public class EducationalContentClassifier {
     }
 
     private static String safe(String value) { return value == null ? "" : value.trim(); }
+    private static boolean describesEntertainmentPurpose(EducationalEvaluationResult result) {
+        String evidence = (safe(result.primaryCategory()) + " " + safe(result.reason()))
+                .toLowerCase(java.util.Locale.ROOT)
+                .replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+        return java.util.regex.Pattern.compile(
+                "\\b(movie|film|tv|television|celebrity|fan|gaming|music|comedy|vlog|sports?)\\b.{0,80}\\b(review|reaction|recap|trailer|teaser|hype|gossip|performance|commentary|entertainment|promotion|promo|fan theory|audience reaction)\\b"
+                        + "|\\b(review|reaction|recap|trailer|teaser|hype|gossip|performance|commentary|entertainment|promotion|promo|fan theory|audience reaction)\\b.{0,80}\\b(movie|film|tv|television|celebrity|fan|gaming|music|comedy|vlog|sports?)\\b")
+                .matcher(evidence).find();
+    }
+
     private static String sample(String transcript) {
         String text = safe(transcript).replaceAll("\\s+", " ");
         if (text.length() <= 3000) return text;
